@@ -480,7 +480,7 @@ function atualizarIndicadoresGps(fix, q) {
   };
   $("#gps-valor").textContent = fix ? `±${nf(fix.precisao, 0)} m` : "—";
   $("#gps-texto").textContent = textos[q];
-  $("#gps-coord").textContent = fix ? `${coord(fix.lat)}, ${coord(fix.lon)}` : GPS.erro && q === "erro" ? GPS.erro : "Mantenha o tablet junto ao sinal.";
+  $("#gps-coord").textContent = fix ? `${coord(fix.lat)}, ${coord(fix.lon)}` : q === "erro" ? "" : "Mantenha o tablet junto ao sinal.";
 }
 
 // ================================================================ Ficha ==
