@@ -186,84 +186,6 @@ const GPS = {
   },
 };
 
-// ===================================================== Ícones dos sinais ==
-function glifo(m) {
-  const s = (c) => `<svg viewBox="0 0 64 64" aria-hidden="true">${c}</svg>`;
-  const txt = (t, tam, cor, y = 37) =>
-    `<text x="32" y="${y}" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, Arial, sans-serif" font-weight="700" font-size="${tam}" fill="${cor}">${esc(t)}</text>`;
-  const pic = (nome) => ({
-    ped: '<circle cx="33" cy="20" r="3.4" fill="#111"/><path d="M32 25l-4 11 5 3-2 10M32 25l5 8 5 2M28 36l-6 3M33 39l6 9" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>',
-    escolar: '<circle cx="27" cy="21" r="3" fill="#111"/><circle cx="39" cy="23" r="2.6" fill="#111"/><path d="M27 25l-3 10 4 3-2 9M39 27l-2 8 3 3-1 8M27 27l6 5M24 35l-4 3" stroke="#111" stroke-width="2.8" fill="none" stroke-linecap="round"/>',
-    lombada: '<path d="M14 42h8c4-10 16-10 20 0h8" stroke="#111" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
-    semaforo: '<rect x="26" y="15" width="12" height="32" rx="3" fill="#111"/><circle cx="32" cy="21" r="3.2" fill="#e53935"/><circle cx="32" cy="31" r="3.2" fill="#fdd835"/><circle cx="32" cy="41" r="3.2" fill="#43a047"/>',
-  }[nome] || "");
-  const asfalto = '<rect x="4" y="4" width="56" height="56" rx="6" fill="#3a3f45"/>';
-  switch (m.forma) {
-    case "pare":
-      return s('<polygon points="22,4 42,4 60,22 60,42 42,60 22,60 4,42 4,22" fill="#c62828"/>' +
-        '<polygon points="23.5,8 40.5,8 56,23.5 56,40.5 40.5,56 23.5,56 8,40.5 8,23.5" fill="none" stroke="#fff" stroke-width="2"/>' +
-        txt("PARE", 16, "#fff", 38));
-    case "preferencia":
-      return s('<polygon points="4,8 60,8 32,58" fill="#c62828"/><polygon points="15,14 49,14 32,45" fill="#fff"/>');
-    case "proibido":
-      return s('<circle cx="32" cy="32" r="28" fill="#c62828"/><rect x="13" y="27" width="38" height="10" fill="#fff"/>');
-    case "reg": {
-      let c = '<circle cx="32" cy="32" r="26" fill="#fff" stroke="#c62828" stroke-width="6"/>' + txt(m.rot || "", m.rot?.length > 1 ? 20 : 26, "#111", 41);
-      if (m.barra) c += '<line x1="15" y1="15" x2="49" y2="49" stroke="#c62828" stroke-width="5"/>';
-      if (m.xis) c += '<line x1="15" y1="15" x2="49" y2="49" stroke="#c62828" stroke-width="5"/><line x1="49" y1="15" x2="15" y2="49" stroke="#c62828" stroke-width="5"/>';
-      return s(c);
-    }
-    case "adv":
-      return s(`<rect x="12" y="12" width="40" height="40" rx="3" transform="rotate(45 32 32)" fill="${m.fluor ? "#c6e000" : "#f2b705"}" stroke="#111" stroke-width="2.5"/>` +
-        (m.pic ? pic(m.pic) : txt(m.rot || "", 16, "#111", 38)));
-    case "ind": {
-      const cor = m.verde ? "#2e7d32" : "#1565c0";
-      return s(`<rect x="3" y="16" width="58" height="32" rx="4" fill="${cor}" stroke="#fff" stroke-width="2"/><rect x="3" y="16" width="58" height="32" rx="4" fill="none" stroke="#6c757d" stroke-width=".8"/>` +
-        txt(m.rot || "", m.rot?.length > 4 ? 12 : 15, "#fff", 37));
-    }
-    case "linha": {
-      const c = m.cor === "am" ? "#f2b705" : "#ffffff";
-      const t = {
-        continua: `<rect x="29" y="4" width="6" height="56" fill="${c}"/>`,
-        tracejada: `<rect x="29" y="6" width="6" height="14" fill="${c}"/><rect x="29" y="27" width="6" height="12" fill="${c}"/><rect x="29" y="46" width="6" height="12" fill="${c}"/>`,
-        dupla: `<rect x="24" y="4" width="5" height="56" fill="${c}"/><rect x="35" y="4" width="5" height="56" fill="${c}"/>`,
-        bordo: `<rect x="48" y="4" width="5" height="56" fill="${c}"/><rect x="29" y="10" width="4" height="12" fill="#f2b705"/><rect x="29" y="40" width="4" height="12" fill="#f2b705"/>`,
-        retencao: `<rect x="8" y="27" width="48" height="10" fill="${c}"/>`,
-        zebra: [10, 20, 30, 40, 50].map((x) => `<rect x="${x - 3}" y="10" width="6" height="44" fill="${c}"/>`).join(""),
-        seta: `<path d="M32 10l12 14h-7v28h-10V24h-7z" fill="${c}"/>`,
-        vaga: `<rect x="14" y="10" width="36" height="44" fill="none" stroke="${c}" stroke-width="4"/>`,
-        zebrado: `<path d="M10 54L32 8 54 54z" fill="none" stroke="${c}" stroke-width="3"/><path d="M20 46l14-14M26 50l16-16M18 38l10-10" stroke="${c}" stroke-width="3"/>`,
-      }[m.tipo] || "";
-      return s(asfalto + t);
-    }
-    case "tacha":
-      return s(asfalto + '<rect x="22" y="24" width="20" height="16" rx="3" fill="#eceff1"/><path d="M24 26h7v12h-7z" fill="#e53935"/><path d="M33 26h7v12h-7z" fill="#fafafa" stroke="#b0bec5"/>');
-    case "tachao":
-      return s(asfalto + '<rect x="14" y="20" width="36" height="24" rx="5" fill="#f2b705"/><path d="M17 24h8v16h-8z" fill="#fff"/><path d="M39 24h8v16h-8z" fill="#fff"/>');
-    case "baliza":
-      return s('<rect x="27" y="6" width="10" height="52" rx="3" fill="#212121"/><rect x="27" y="12" width="10" height="7" fill="#fff"/><rect x="27" y="24" width="10" height="7" fill="#fff"/><rect x="20" y="56" width="24" height="4" rx="2" fill="#555"/>');
-    case "lombada":
-      return s(asfalto + '<path d="M6 46c8-22 44-22 52 0z" fill="#5d646b"/><path d="M14 40l6-8 6 8M28 37l4-7 4 7M38 40l6-8 6 8" stroke="#f2b705" stroke-width="3" fill="none"/>');
-    case "gradil":
-      return s('<rect x="6" y="18" width="52" height="4" fill="#607d8b"/><rect x="6" y="44" width="52" height="4" fill="#607d8b"/>' +
-        [8, 18, 28, 38, 48].map((x) => `<rect x="${x}" y="14" width="4" height="40" fill="#78909c"/>`).join(""));
-    case "semaforo":
-      return s('<rect x="21" y="4" width="22" height="50" rx="5" fill="#212121"/><circle cx="32" cy="15" r="6" fill="#e53935"/><circle cx="32" cy="29" r="6" fill="#fdd835"/><circle cx="32" cy="43" r="6" fill="#43a047"/><rect x="30" y="54" width="4" height="8" fill="#555"/>');
-    case "semaforo-ped":
-      return s('<rect x="19" y="6" width="26" height="46" rx="5" fill="#212121"/><circle cx="32" cy="19" r="7" fill="#e53935"/><circle cx="32" cy="39" r="7" fill="#43a047"/><rect x="30" y="52" width="4" height="10" fill="#555"/>');
-    case "poste":
-      return s('<rect x="29" y="4" width="6" height="54" fill="#90a4ae"/><rect x="20" y="58" width="24" height="3" rx="1.5" fill="#607d8b"/><rect x="22" y="10" width="20" height="14" rx="2" fill="none" stroke="#90a4ae" stroke-width="2" stroke-dasharray="3 3"/>');
-    case "bracadeira":
-      return s('<rect x="29" y="4" width="6" height="56" fill="#90a4ae"/><rect x="22" y="22" width="20" height="8" rx="2" fill="none" stroke="#455a64" stroke-width="3"/><circle cx="20" cy="26" r="2.5" fill="#455a64"/><circle cx="44" cy="26" r="2.5" fill="#455a64"/>');
-    case "portico":
-      return s('<rect x="10" y="8" width="6" height="52" fill="#90a4ae"/><rect x="10" y="8" width="46" height="6" fill="#90a4ae"/><rect x="34" y="16" width="20" height="14" rx="2" fill="#1565c0"/>');
-    case "servico":
-      return s('<circle cx="32" cy="32" r="26" fill="#eceff1" stroke="#607d8b" stroke-width="3"/>' + txt(m.rot || "", 24, "#37474f", 41));
-    default:
-      return s('<rect x="8" y="8" width="48" height="48" rx="6" fill="none" stroke="#78909c" stroke-width="3" stroke-dasharray="6 4"/>' + txt(m.rot || "?", 26, "#546e7a", 42));
-  }
-}
-
 // ================================================================ Dados ==
 async function listarVistorias() {
   const [vistorias, itens] = await Promise.all([BD.todos("vistorias"), BD.todos("itens")]);
@@ -564,7 +486,7 @@ function atualizarIndicadoresGps(fix, q) {
 // ================================================================ Ficha ==
 function fichaNova(vistoriaId) {
   return {
-    vistoriaId, itemId: null, material: null, cat: estado.ficha?.cat || "VERTICAL", busca: "",
+    vistoriaId, itemId: null, material: null, cat: estado.ficha?.cat || "R", busca: "",
     quantidade: 1, estado: "RUIM", acao: "SUBSTITUIR", lado: "DIREITO", observacao: "",
     fotos: [], fotosRemovidas: [], posicaoFixa: null, confirmarSemGps: false, confirmarExclusao: false,
     compr: "", larg: "",
@@ -578,7 +500,7 @@ async function carregarFichaDoItem(itemId) {
   liberarUrlsFicha();
   estado.ficha = {
     ...fichaNova(i.vistoriaId), itemId: i.id, material: i.materialCodigo,
-    cat: POR_CODIGO[i.materialCodigo]?.cat || "VERTICAL", quantidade: i.quantidade, estado: i.estado,
+    cat: POR_CODIGO[i.materialCodigo]?.grupo || "R", quantidade: i.quantidade, estado: i.estado,
     acao: i.acao, lado: i.lado, observacao: i.observacao || "",
     fotos: fotos.sort((a, b) => a.capturadaEm.localeCompare(b.capturadaEm))
       .map((f) => ({ id: f.id, blob: f.blob, url: URL.createObjectURL(f.blob), capturadaEm: f.capturadaEm, nova: false })),
@@ -608,7 +530,7 @@ function renderFicha() {
         <div id="sel-box"></div>
         ${config.recentes?.length ? `<div class="recentes" aria-label="Usados recentemente">${config.recentes.map((c) => POR_CODIGO[c]).filter(Boolean)
           .map((m) => `<button class="recente" data-acao="material" data-cod="${m.cod}">${glifo(m)}<span class="num">${esc(m.mbst || m.cod)}</span></button>`).join("")}</div>` : ""}
-        <div class="abas" role="group" aria-label="Tipo de sinalização">${CATEGORIAS.map(([c, r]) =>
+        <div class="abas" role="group" aria-label="Tipo de sinalização">${GRUPOS.map(([c, r]) =>
           `<button class="aba" data-acao="cat" data-cat="${c}" aria-pressed="${f.cat === c && !f.busca}">${r}</button>`).join("")}</div>
         <label class="sr" for="busca-sinal">Buscar sinal</label>
         <input class="campo-texto" id="busca-sinal" type="search" placeholder="Buscar por código ou nome (ex.: R-19, faixa, lombada)" value="${esc(f.busca)}" autocomplete="off">
@@ -715,11 +637,17 @@ function atualizarGrade() {
   const q = f.busca.trim().toLowerCase();
   const lista = q
     ? CATALOGO.filter((m) => `${m.cod} ${m.mbst} ${m.desc}`.toLowerCase().includes(q))
-    : CATALOGO.filter((m) => m.cat === f.cat);
-  $("#grade-sinais").innerHTML = lista.length ? lista.map((m) => `
-    <button class="sinal" data-acao="material" data-cod="${m.cod}" aria-pressed="${f.material === m.cod}">
+    : CATALOGO.filter((m) => m.grupo === f.cat);
+  let subAtual = null;
+  $("#grade-sinais").innerHTML = lista.length ? lista.map((m) => {
+    const titulo = !q && m.sub && m.sub !== subAtual ? `<h4 class="sub-grade">${esc(m.sub)}</h4>` : "";
+    subAtual = m.sub;
+    return `${titulo}<button class="sinal" data-acao="material" data-cod="${m.cod}" aria-pressed="${f.material === m.cod}">
       ${glifo(m)}<span class="cod">${esc(m.mbst || m.cod)}</span><span class="d">${esc(m.desc)}</span>
-    </button>`).join("") : `<p class="meta">Nenhum item encontrado para "${esc(f.busca)}".</p>`;
+    </button>`;
+  }).join("") : `<p class="meta">Nenhum item encontrado para "${esc(f.busca)}".</p>`;
+  const contagem = $("#sel-resumo");
+  if (contagem) contagem.textContent = q ? `${lista.length} encontrado(s)` : `${lista.length} itens nesta aba`;
 }
 
 function atualizarFotos() {
@@ -853,7 +781,7 @@ async function repetirUltimo() {
   const ultimo = estado.itens[estado.itens.length - 1];
   if (!ultimo) return;
   Object.assign(estado.ficha, {
-    material: ultimo.materialCodigo, cat: POR_CODIGO[ultimo.materialCodigo]?.cat || estado.ficha.cat,
+    material: ultimo.materialCodigo, cat: POR_CODIGO[ultimo.materialCodigo]?.grupo || estado.ficha.cat,
     quantidade: ultimo.quantidade, estado: ultimo.estado, acao: ultimo.acao, lado: ultimo.lado, busca: "",
   });
   renderFicha();
@@ -1024,7 +952,8 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
   }
   const ordemCat = CATEGORIAS.map((c) => c[0]);
   const quant = [...agreg.values()].sort((a, b) =>
-    ordemCat.indexOf(a.m.cat) - ordemCat.indexOf(b.m.cat) || a.m.cod.localeCompare(b.m.cod) || a.acao.localeCompare(b.acao));
+    ordemCat.indexOf(a.m.cat) - ordemCat.indexOf(b.m.cat) ||
+    (ORDEM_CATALOGO[a.m.cod] ?? 9999) - (ORDEM_CATALOGO[b.m.cod] ?? 9999) || a.acao.localeCompare(b.acao));
   let linhasQuant = "", catAtual = null;
   for (const q of quant) {
     if (q.m.cat !== catAtual) {
@@ -1430,7 +1359,7 @@ document.addEventListener("click", async (e) => {
     case "material": {
       f.material = el.dataset.cod;
       const m = POR_CODIGO[f.material];
-      if (m.cat !== f.cat && !f.busca) { f.cat = m.cat; $$(".aba").forEach((a) => a.setAttribute("aria-pressed", String(a.dataset.cat === f.cat))); }
+      if (m.grupo !== f.cat && !f.busca) { f.cat = m.grupo; $$(".aba").forEach((a) => a.setAttribute("aria-pressed", String(a.dataset.cat === f.cat))); }
       atualizarSelecionado();
       atualizarGrade();
       $("#area-confirmar").innerHTML = "";

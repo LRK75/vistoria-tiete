@@ -9,7 +9,11 @@ Docker nem instalação de programas no computador.
 - Cadastra a vistoria (rua, bairro, trecho, responsável) com número sequencial (ex.: 2026/0001).
 - Registra cada sinal no local:
   - **posição GPS** escolhida entre as leituras mais precisas, com a precisão em metros;
-  - **catálogo visual** com 38 itens: placas MBST, pintura no solo, dispositivos, semáforos, suportes e serviços;
+  - **catálogo visual completo** (185 itens), com ícone e busca por código ou nome:
+    - todas as placas de **regulamentação** (R-1 a R-40) e de **advertência** (A-1a a A-48);
+    - os tipos de placas de **indicação**;
+    - todas as marcas de **sinalização horizontal** do MBST Vol. IV (longitudinais, transversais, canalização, estacionamento e inscrições);
+    - dispositivos auxiliares, semáforos, suportes e serviços;
   - estado de conservação, ação recomendada, lado da via e quantidade (com cálculo de área em m²);
   - **fotos** tiradas pela câmera, com carimbo de data, hora e coordenadas.
 - Mostra o croqui dos pontos sem internet e o mapa do OpenStreetMap quando há conexão.
@@ -115,7 +119,7 @@ Os dados ficam no armazenamento do navegador do tablet. Eles **se perdem** se vo
 
 Se algum arquivo for alterado:
 
-1. Abra `sw.js` e troque `vistoria-campo-v1` por `vistoria-campo-v2` (e assim por diante).
+1. Abra `sw.js` e aumente o número da versão (ex.: `vistoria-campo-v2` para `vistoria-campo-v3`).
 2. Publique a pasta de novo:
    - Netlify: arraste a pasta outra vez em *Deploys*;
    - GitHub: envie os arquivos alterados.
@@ -132,6 +136,7 @@ As vistorias já gravadas **não** são afetadas pela atualização.
 | `index.html` | Página do aplicativo |
 | `app.js` | Funcionamento: telas, GPS, fotos, armazenamento, relatório e exportações |
 | `catalogo.js` | Catálogo de sinais (códigos MBST, Res. CONTRAN nº 973/2022), estados e ações |
+| `glifos.js` | Desenho dos ícones das placas e marcas |
 | `estilo.css` | Aparência, incluindo o layout de impressão do relatório |
 | `sw.js` | Funcionamento sem internet (*service worker*) |
 | `manifest.webmanifest`, `icones/` | Instalação na tela inicial |

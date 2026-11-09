@@ -232,6 +232,7 @@ textarea { min-height: 84px; resize: vertical; }
 .sinal .cod { font: 600 16px/1 var(--f-sinal); }
 .sinal .d { font-size: 12.5px; line-height: 1.2; color: var(--tinta-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sinal[aria-pressed="true"] { border: 3px solid var(--amarelo); background: var(--amarelo-suave); padding: 8px 4px 6px; }
+.sub-grade { grid-column: 1 / -1; margin: 8px 0 0; font: 600 16px/1.2 var(--f-sinal); color: var(--tinta-2); border-bottom: 1px solid var(--borda); padding-bottom: 4px; }
 .recentes { display: flex; gap: 6px; flex-wrap: wrap; }
 .recente { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px 0 6px;
   border-radius: 999px; border: 1px solid var(--borda); background: var(--papel); }
