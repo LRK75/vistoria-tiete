@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vistoria de Campo</title>
+<meta name="description" content="Vistoria georreferenciada de sinalização viária para tablet, com funcionamento sem internet.">
+<meta name="theme-color" content="#2b3036">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icones/icone-192.png">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vistoria">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="topo" id="topo"></header>
+<main id="tela" aria-live="polite"><div class="tela">Carregando...</div></main>
+<div id="relatorio" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">Este aplicativo precisa de JavaScript ativado no navegador.</p></noscript>
+<script src="catalogo.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
