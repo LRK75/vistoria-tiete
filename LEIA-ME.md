@@ -24,6 +24,8 @@ Docker nem instalação de programas no computador.
   - quantitativo por volume do MBST;
   - fotos gerais e fotos dos itens, com as observações;
   - assinatura da Chefia do Departamento.
+- **Envia o PDF direto** pelo menu de compartilhamento do tablet (WhatsApp, e-mail, Google Drive,
+  Salvar em Arquivos, Bluetooth e outros), também sem internet para gerar o arquivo.
 - Exporta **planilha (CSV)**, **mapa (GeoJSON)** e **cópia de segurança (.json)**.
 
 Os dados ficam **somente no tablet**. Nenhuma informação é enviada a servidor algum.
@@ -92,7 +94,7 @@ A partir daí o aplicativo abre e funciona **sem internet**.
 | 4 | Marque estado, ação e lado da via; ajuste a quantidade |
 | 5 | **Tirar foto**: enquadre o sinal, evitando pessoas e placas de veículos |
 | 6 | **Salvar item**. Para o próximo sinal igual, use **Repetir último** |
-| 7 | Ao terminar: **Concluir vistoria** e **Relatório (PDF) > Gerar PDF > Salvar como PDF** |
+| 7 | Ao terminar: **Concluir vistoria** e **Relatório (PDF)**. Aguarde *PDF pronto* e toque em **Enviar PDF** (escolha WhatsApp, e-mail, Drive etc.) ou **Salvar PDF** |
 
 Dicas:
 - O botão **Tela ligada** impede que a tela apague durante a vistoria.
@@ -142,6 +144,7 @@ As vistorias já gravadas **não** são afetadas pela atualização.
 | `catalogo.js` | Catálogo de sinais (códigos MBST, Res. CONTRAN nº 973/2022), estados e ações |
 | `glifos.js` | Desenho dos ícones das placas e marcas |
 | `estilo.css` | Aparência, incluindo o layout de impressão do relatório |
+| `pdf-relatorio.js`, `lib/` | Geração do arquivo PDF no tablet (biblioteca pdf-lib, licença MIT) |
 | `sw.js` | Funcionamento sem internet (*service worker*) |
 | `manifest.webmanifest`, `icones/` | Instalação na tela inicial |
 

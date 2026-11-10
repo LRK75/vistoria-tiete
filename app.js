@@ -1006,8 +1006,11 @@ async function excluirFotoGeral(id) {
 
 // ============================================================ Relatório ==
 let urlsRelatorio = [];
+const pdfRel = { arquivo: null, geracao: 0 }; // PDF pronto para enviar
 function fecharRelatorio() {
   const r = $("#relatorio");
+  pdfRel.geracao++;
+  pdfRel.arquivo = null;
   if (r && !r.hidden) { r.hidden = true; r.innerHTML = ""; }
   urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
   urlsRelatorio = [];
@@ -1026,10 +1029,12 @@ async function abrirRelatorio(id) {
   r.innerHTML = `
     <div class="rel-barra">
       <button class="btn" data-acao="ir" data-destino="#v/${id}">Voltar à vistoria</button>
-      <span class="dica">Toque em Gerar PDF e escolha <b>Salvar como PDF</b> na janela de impressão.</span>
+      <span class="dica" id="rel-status">Preparando o PDF...</span>
       <div class="direita">
         <label class="interruptor" style="min-height:44px;color:#fff"><input type="checkbox" id="rel-fotos" checked> Incluir fotos</label>
-        <button class="btn btn-primario" data-acao="imprimir">Gerar PDF</button>
+        <button class="btn btn-primario" id="rel-enviar" disabled hidden>Enviar PDF</button>
+        <button class="btn" id="rel-baixar" disabled>Salvar PDF</button>
+        <button class="btn" data-acao="imprimir">Imprimir</button>
       </div>
     </div>
     <article class="folha" id="folha">${htmlRelatorio(v, itens, fotosPorItem, true)}</article>`;
@@ -1039,8 +1044,57 @@ async function abrirRelatorio(id) {
     urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
     urlsRelatorio = [];
     $("#folha").innerHTML = htmlRelatorio(v, itens, fotosPorItem, e.target.checked);
+    prepararPdf(v, itens, fotosPorItem, e.target.checked);
   });
+  // O compartilhamento precisa partir do toque do usuário: por isso o PDF é gerado antes,
+  // e o botão chama navigator.share sem esperar nada.
+  $("#rel-enviar").addEventListener("click", () => enviarPdfRelatorio(v));
+  $("#rel-baixar").addEventListener("click", () => { if (pdfRel.arquivo) entregar(pdfRel.arquivo.name, pdfRel.arquivo, false); });
   document.title = `Vistoria ${v.protocolo.replace("/", "-")} - ${v.logradouro}`;
+  prepararPdf(v, itens, fotosPorItem, true);
+}
+
+// ------------------------------------------------- PDF para compartilhar ----
+async function prepararPdf(v, itens, fotosPorItem, comFotos) {
+  const g = ++pdfRel.geracao;
+  pdfRel.arquivo = null;
+  const st = $("#rel-status"), bE = $("#rel-enviar"), bB = $("#rel-baixar");
+  if (!st) return;
+  st.textContent = "Preparando o PDF...";
+  bE.disabled = bB.disabled = true;
+  try {
+    const blob = await gerarPdfRelatorio(v, itens, fotosPorItem, comFotos);
+    if (g !== pdfRel.geracao || !$("#rel-status")) return;
+    const nome = `relatorio_${nomeBase(v)}${comFotos ? "" : "_sem_fotos"}.pdf`;
+    pdfRel.arquivo = new File([blob], nome, { type: "application/pdf" });
+    const comp = podeCompartilhar(pdfRel.arquivo);
+    bE.hidden = !comp;
+    bE.disabled = bB.disabled = false;
+    const tam = blob.size > 1048576 ? `${nf(blob.size / 1048576, 1)} MB` : `${nf(Math.max(1, blob.size / 1024), 0)} KB`;
+    st.innerHTML = comp
+      ? `PDF pronto (${tam}). <b>Enviar PDF</b>: WhatsApp, e-mail, Drive, Arquivos e outros.`
+      : `PDF pronto (${tam}). Toque em <b>Salvar PDF</b>.`;
+  } catch (e) {
+    if (g !== pdfRel.geracao || !$("#rel-status")) return;
+    console.error(e);
+    st.innerHTML = "Não foi possível gerar o PDF. Use <b>Imprimir</b> e escolha <b>Salvar como PDF</b>.";
+  }
+}
+
+async function enviarPdfRelatorio(v) {
+  const arq = pdfRel.arquivo;
+  if (!arq) return;
+  try {
+    await navigator.share({
+      files: [arq],
+      title: `Relatório de vistoria nº ${v.protocolo}`,
+      text: `Relatório Técnico de Vistoria nº ${v.protocolo}, ${v.logradouro}${v.bairro ? `, ${v.bairro}` : ""}.`,
+    });
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    if (e.name === "NotAllowedError") return toast("Toque novamente em Enviar PDF.");
+    entregar(arq.name, arq, false);
+  }
 }
 
 function htmlRelatorio(v, itens, fotosPorItem, comFotos) {

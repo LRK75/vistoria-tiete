@@ -1,8 +1,8 @@
 /* Service worker: guarda o aplicativo no tablet para funcionar sem internet.
  * Ao publicar uma nova versão, altere VERSAO para que os tablets atualizem. */
-const VERSAO = "vistoria-campo-v4";
+const VERSAO = "vistoria-campo-v5";
 const ARQUIVOS = [
-  "./", "index.html", "estilo.css", "app.js", "catalogo.js", "glifos.js", "manifest.webmanifest",
+  "./", "index.html", "estilo.css", "app.js", "catalogo.js", "glifos.js", "pdf-relatorio.js", "lib/pdf-lib.min.js", "manifest.webmanifest",
   "icones/icone-192.png", "icones/icone-512.png", "icones/icone-180.png",
 ];
 // Bibliotecas e fontes externas: guardadas na primeira vez que são usadas
