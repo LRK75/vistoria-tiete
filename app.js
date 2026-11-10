@@ -100,6 +100,7 @@ const CONFIG_PADRAO = {
   vistoriadorNome: "", vistoriadorMatricula: "", vistoriadorCargo: "Agente de Trânsito",
   orgaoEnte: "PREFEITURA MUNICIPAL DE TIETÊ", orgaoUf: "Estado de São Paulo",
   orgaoUnidade: "Departamento de Trânsito, Engenharia e Fiscalização", municipio: "Tietê/SP",
+  chefeNome: "", chefeCargo: "Chefe do Departamento de Trânsito, Engenharia e Fiscalização",
   metaGps: 5, carimbo: true, tema: "sistema", seq: 0, ultimoBackup: null, recentes: [],
 };
 let config = { ...CONFIG_PADRAO };
@@ -231,7 +232,7 @@ async function render() {
   const h = location.hash || "#inicio";
   const [rota, id, sub, extra] = h.slice(1).split("/");
   fecharRelatorio();
-  if (rota !== "v") { GPS.parar(); liberarWakeLock(); }
+  if (!["v", "nova", "editar"].includes(rota)) { GPS.parar(); liberarWakeLock(); }
   try {
     if (rota === "nova" || rota === "editar") return await telaFormVistoria(rota === "editar" ? id : null);
     if (rota === "config") return telaConfig();
@@ -326,6 +327,8 @@ async function telaFormVistoria(id) {
   if (id && !v) return ir("#inicio", true);
   topo({ voltar: id ? `#v/${id}` : "#inicio", titulo: id ? "Dados da vistoria" : "Nova vistoria", sub: id ? protocoloTxt(v) : config.municipio });
   const d = v || { data: hojeLocal(), vistoriador: { nome: config.vistoriadorNome, matricula: config.vistoriadorMatricula, cargo: config.vistoriadorCargo } };
+  if (fotosGerais.vistoriaId !== (id || null) || !id) await carregarFotosGerais(id || null);
+  GPS.iniciar();
   $("#tela").innerHTML = `
     <div class="tela">
       <form class="form" id="form-vistoria" novalidate>
@@ -341,6 +344,7 @@ async function telaFormVistoria(id) {
           <label class="campo">Observações gerais <small>Aparecem no fim do relatório</small>
             <textarea id="f-obs">${esc(d.observacoes || "")}</textarea></label>
         </div>
+        ${blocoFotosGerais()}
         <div class="cartao secao-form">
           <h3>Responsável pela vistoria</h3>
           <div class="duas">
@@ -381,6 +385,15 @@ async function telaFormVistoria(id) {
     config.vistoriadorMatricula = reg.vistoriador.matricula;
     config.vistoriadorCargo = reg.vistoriador.cargo;
     await BD.gravar("vistorias", reg);
+    // Fotos gerais tiradas antes de "Começar vistoria" ficam vinculadas a ela agora
+    if (!fotosGerais.vistoriaId) {
+      fotosGerais.vistoriaId = reg.id;
+      for (const f of fotosGerais.lista) {
+        f.vistoriaId = reg.id;
+        const { url, ...registro } = f;
+        await BD.gravar("fotos", registro);
+      }
+    }
     await salvarConfig();
     pedirArmazenamentoPersistente();
     ir(`#v/${reg.id}`, true);
@@ -395,6 +408,7 @@ async function telaVistoria(id, abrirItem) {
   const itens = await itensDa(id);
   estado.vistoria = v;
   estado.itens = itens;
+  if (fotosGerais.vistoriaId !== id) await carregarFotosGerais(id);
 
   // A ficha fica em memória enquanto o app estiver aberto (não perde o que foi preenchido)
   if (abrirItem && abrirItem !== "novo") {
@@ -429,6 +443,7 @@ async function telaVistoria(id, abrirItem) {
             </div>
             <div id="painel-exportar" hidden></div>
           </div>
+          ${blocoFotosGerais()}
           <div class="cartao" style="padding:12px;display:grid;gap:8px">
             <div style="display:flex;align-items:center;gap:8px">
               <b>Posição dos itens</b>
@@ -895,6 +910,98 @@ async function abrirMapa() {
   else if (atual) mapa.setView([atual.lat, atual.lon], 18);
 }
 
+// ========================================================= Fotos gerais ==
+/* Fotos da vistoria que não pertencem a um item (vista do trecho, situação do local),
+ * cada uma com sua observação. Na criação da vistoria ficam em memória até "Começar vistoria". */
+const GERAIS = "__gerais__";
+// Na ordem em que foram inseridas (uma foto da galeria pode ter data anterior)
+const ordenarFotosGerais = (lista) =>
+  lista.sort((a, b) => (a.inseridaEm || a.capturadaEm).localeCompare(b.inseridaEm || b.capturadaEm));
+let fotosGerais = { vistoriaId: null, lista: [] };
+const temporizadoresLegenda = {};
+
+function liberarFotosGerais() {
+  fotosGerais.lista.forEach((f) => URL.revokeObjectURL(f.url));
+  fotosGerais = { vistoriaId: null, lista: [] };
+}
+
+async function carregarFotosGerais(vistoriaId) {
+  liberarFotosGerais();
+  fotosGerais.vistoriaId = vistoriaId;
+  if (!vistoriaId) return;
+  const todas = await BD.porIndice("fotos", "vistoriaId", vistoriaId);
+  fotosGerais.lista = ordenarFotosGerais(todas.filter((f) => !f.itemId))
+    .map((f) => ({ ...f, url: URL.createObjectURL(f.blob) }));
+}
+
+function blocoFotosGerais() {
+  const lista = fotosGerais.lista;
+  return `<section class="cartao fotos-gerais" id="fotos-gerais" aria-label="Fotos gerais da vistoria">
+    <div class="fg-cab"><h3>Fotos gerais da vistoria</h3>
+      <span class="meta">${lista.length ? `${lista.length} foto${lista.length > 1 ? "s" : ""}` : "Vista do trecho e situação do local, cada uma com sua observação"}</span></div>
+    ${lista.length ? `<div class="fg-lista">${lista.map((f, k) => `
+      <figure class="fg-cartao">
+        <img src="${f.url}" alt="Foto geral ${k + 1}">
+        <div class="fg-info">
+          <label class="fg-rotulo" for="fg-${f.id}">Observação da foto ${k + 1}</label>
+          <textarea id="fg-${f.id}" data-fg="${f.id}" maxlength="500" placeholder="Ex.: vista geral do trecho no sentido centro">${esc(f.legenda || "")}</textarea>
+          <div class="fg-rodape"><span class="meta">${dataHoraBr(f.capturadaEm)}${f.origem === "galeria" ? ", da galeria" : ""}</span>
+            <button class="btn btn-perigo" type="button" data-acao="fg-excluir" data-id="${f.id}">Excluir</button></div>
+        </div>
+      </figure>`).join("")}</div>` : ""}
+    <div class="fg-botoes">
+      <label class="btn botao-foto">Tirar foto<input type="file" accept="image/*" capture="environment" data-acao="fg-camera"></label>
+      <label class="btn botao-foto">Escolher da galeria<input type="file" accept="image/*" multiple data-acao="fg-galeria"></label>
+    </div>
+  </section>`;
+}
+
+function atualizarFotosGerais() {
+  const el = $("#fotos-gerais");
+  if (el) el.outerHTML = blocoFotosGerais();
+}
+
+async function adicionarFotosGerais(arquivos, daGaleria) {
+  const v = fotosGerais.vistoriaId ? await BD.um("vistorias", fotosGerais.vistoriaId) : null;
+  const logradouro = v?.logradouro || $("#f-logradouro")?.value.trim() || "";
+  for (const arq of arquivos) {
+    try {
+      // Foto da galeria: usa a data do arquivo e não grava a posição atual (pode ter sido tirada em outro lugar)
+      const pos = daGaleria ? null : GPS.melhor();
+      const quando = daGaleria && arq.lastModified ? new Date(arq.lastModified) : new Date();
+      const blob = await processarFoto(arq, config.carimbo ? [
+        `${config.municipio} — ${v ? `Vistoria nº ${v.protocolo}` : "Vistoria"} — Foto geral`,
+        `${quando.toLocaleString("pt-BR")} — ${pos ? `${coord(pos.lat)}, ${coord(pos.lon)} (±${nf(pos.precisao, 0)} m)` : daGaleria ? "foto escolhida da galeria" : "sem posição GPS"}`,
+        logradouro,
+      ].filter(Boolean) : null);
+      const foto = {
+        id: novoId(), itemId: null, vistoriaId: fotosGerais.vistoriaId, blob, capturadaEm: quando.toISOString(),
+        inseridaEm: new Date(Date.now() + fotosGerais.lista.length).toISOString(),
+        legenda: "", origem: daGaleria ? "galeria" : "camera", lat: pos?.lat ?? null, lon: pos?.lon ?? null, precisao: pos?.precisao ?? null,
+      };
+      if (fotosGerais.vistoriaId) await BD.gravar("fotos", foto);
+      fotosGerais.lista.push({ ...foto, url: URL.createObjectURL(blob) });
+    } catch (e) {
+      console.error(e);
+      toast("Não foi possível ler uma das fotos.");
+    }
+  }
+  pedirArmazenamentoPersistente();
+  atualizarFotosGerais();
+  const ultima = fotosGerais.lista[fotosGerais.lista.length - 1];
+  if (ultima) $(`#fg-${CSS.escape(ultima.id)}`)?.focus({ preventScroll: false });
+}
+
+async function excluirFotoGeral(id) {
+  const k = fotosGerais.lista.findIndex((f) => f.id === id);
+  if (k < 0) return;
+  const [foto] = fotosGerais.lista.splice(k, 1);
+  URL.revokeObjectURL(foto.url);
+  if (fotosGerais.vistoriaId) await BD._tx(["fotos"], "readwrite", (tx) => { tx.objectStore("fotos").delete(id); });
+  atualizarFotosGerais();
+  toast("Foto excluída.");
+}
+
 // ============================================================ Relatório ==
 let urlsRelatorio = [];
 function fecharRelatorio() {
@@ -909,7 +1016,10 @@ async function abrirRelatorio(id) {
   const itens = await itensDa(id);
   const fotos = await BD.porIndice("fotos", "vistoriaId", id);
   const fotosPorItem = {};
-  for (const f of fotos.sort((a, b) => a.capturadaEm.localeCompare(b.capturadaEm))) (fotosPorItem[f.itemId] ||= []).push(f);
+  for (const f of fotos.sort((a, b) => a.capturadaEm.localeCompare(b.capturadaEm))) {
+    if (f.itemId) (fotosPorItem[f.itemId] ||= []).push(f);
+  }
+  fotosPorItem[GERAIS] = ordenarFotosGerais(fotos.filter((f) => !f.itemId));
   const r = $("#relatorio");
   r.innerHTML = `
     <div class="rel-barra">
@@ -967,6 +1077,13 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
 
   let figuras = "", nFoto = 0;
   if (comFotos) {
+    for (const f of fotosPorItem[GERAIS] || []) {
+      nFoto++;
+      const u = URL.createObjectURL(f.blob);
+      urlsRelatorio.push(u);
+      figuras += `<figure><img src="${u}" alt="Foto ${nFoto}"><figcaption><b>Foto ${nFoto}</b>, vista geral${f.legenda ? `: ${esc(f.legenda)}` : "."}<br>
+        ${dataHoraBr(f.capturadaEm)}${f.lat != null ? `, ${coord(f.lat)}; ${coord(f.lon)}` : ""}</figcaption></figure>`;
+    }
     itens.forEach((i, k) => {
       for (const f of fotosPorItem[i.id] || []) {
         nFoto++;
@@ -978,7 +1095,7 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
       }
     });
   }
-  const nTotalFotos = itens.reduce((s, i) => s + (fotosPorItem[i.id]?.length || 0), 0);
+  const nTotalFotos = itens.reduce((s, i) => s + (fotosPorItem[i.id]?.length || 0), 0) + (fotosPorItem[GERAIS]?.length || 0);
   let sec = 6;
 
   return `
@@ -1042,11 +1159,10 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
       <h2>${++sec}. OBSERVAÇÕES GERAIS</h2>
       <p>${esc(v.observacoes || "Sem observações adicionais.")}</p>
       <h2>${++sec}. ENCERRAMENTO</h2>
-      <p>Nada mais havendo a registrar, encerra-se o presente relatório, composto de ${itens.length} item(ns) inventariado(s) e ${comFotos ? nTotalFotos : 0} registro(s) fotográfico(s), que segue assinado pelo responsável pela vistoria e pela chefia imediata.</p>
+      <p>Nada mais havendo a registrar, encerra-se o presente relatório, composto de ${itens.length} item(ns) inventariado(s) e ${comFotos ? nTotalFotos : 0} registro(s) fotográfico(s), que segue assinado pela Chefia do Departamento.</p>
       <p>${esc(config.municipio)}, ${new Date().toLocaleDateString("pt-BR")}.</p>
       <div class="assin">
-        <div><b>${esc(v.vistoriador?.nome || "Responsável pela vistoria")}</b><br>${esc(v.vistoriador?.cargo || "")}${v.vistoriador?.matricula ? `, matr. ${esc(v.vistoriador.matricula)}` : ""}</div>
-        <div><b>Chefia do Departamento</b><br>${esc(config.orgaoUnidade)}</div>
+        <div>${config.chefeNome ? `<b>${esc(config.chefeNome)}</b><br>` : ""}${esc(config.chefeCargo || "Chefe do Departamento")}${config.chefeCargo?.includes(config.orgaoUnidade) ? "" : `<br>${esc(config.orgaoUnidade)}`}</div>
       </div>
     </div>`;
 }
@@ -1203,6 +1319,12 @@ function telaConfig() {
           <label class="campo">Cargo <input class="campo-texto" id="c-cargo" value="${esc(c.vistoriadorCargo)}"></label>
         </div>
         <div class="cartao secao-form">
+          <h3>Assinatura do relatório</h3>
+          <p class="meta" style="margin:0">O relatório é assinado somente pela chefia do departamento.</p>
+          <label class="campo">Nome do chefe do departamento <input class="campo-texto" id="c-chefe-nome" value="${esc(c.chefeNome)}"></label>
+          <label class="campo">Cargo <input class="campo-texto" id="c-chefe-cargo" value="${esc(c.chefeCargo)}"></label>
+        </div>
+        <div class="cartao secao-form">
           <h3>Órgão (cabeçalho do relatório)</h3>
           <label class="campo">Ente <input class="campo-texto" id="c-ente" value="${esc(c.orgaoEnte)}"></label>
           <div class="duas">
@@ -1238,6 +1360,7 @@ function telaConfig() {
     const val = (s) => $(s).value.trim();
     Object.assign(config, {
       vistoriadorNome: val("#c-nome"), vistoriadorMatricula: val("#c-matricula"), vistoriadorCargo: val("#c-cargo"),
+      chefeNome: val("#c-chefe-nome"), chefeCargo: val("#c-chefe-cargo") || "Chefe do Departamento",
       orgaoEnte: val("#c-ente"), orgaoUf: val("#c-uf"), municipio: val("#c-municipio") || "Tietê/SP", orgaoUnidade: val("#c-unidade"),
       metaGps: Number($("#c-meta").value), carimbo: $("#c-carimbo").checked, tema: $("#c-tema").value,
     });
@@ -1285,6 +1408,9 @@ async function criarDemonstracao() {
     }
     itens.push(item);
   }
+  const geral = await fotoDemonstracao({ forma: "linha", cor: "br", tipo: "zebra" }, 0, { ...itens[0], capturadoEm: v.criadoEm }, v, true);
+  fotos.push({ id: novoId(), itemId: null, vistoriaId: v.id, blob: geral, capturadaEm: v.criadoEm, origem: "camera",
+    legenda: "Vista geral do trecho no sentido centro, com a travessia de pedestres ao fundo.", lat: base[0], lon: base[1], precisao: 4.2 });
   await BD._tx(["vistorias", "itens", "fotos"], "readwrite", (tx) => {
     tx.objectStore("vistorias").put(v);
     itens.forEach((i) => tx.objectStore("itens").put(i));
@@ -1294,7 +1420,7 @@ async function criarDemonstracao() {
   ir(`#v/${v.id}`);
 }
 
-async function fotoDemonstracao(m, n, item, v) {
+async function fotoDemonstracao(m, n, item, v, geral = false) {
   const tela = document.createElement("canvas");
   tela.width = 1200; tela.height = 900;
   const ctx = tela.getContext("2d");
@@ -1312,7 +1438,7 @@ async function fotoDemonstracao(m, n, item, v) {
   ctx.drawImage(img, 420, 120, 360, 360);
   const arq = await new Promise((ok) => tela.toBlob(ok, "image/jpeg", 0.85));
   return processarFoto(arq, [
-    `${config.municipio} — Vistoria nº ${v.protocolo} — Item ${n} (${m.mbst || m.cod}) — DEMONSTRAÇÃO`,
+    `${config.municipio} — Vistoria nº ${v.protocolo} — ${geral ? "Foto geral" : `Item ${n} (${m.mbst || m.cod})`} — DEMONSTRAÇÃO`,
     `${new Date(item.capturadoEm).toLocaleString("pt-BR")} — ${coord(item.lat)}, ${coord(item.lon)} (±${nf(item.precisao, 0)} m)`,
     v.logradouro,
   ]);
@@ -1418,6 +1544,9 @@ document.addEventListener("click", async (e) => {
       if (await entregar(nome, blob, false)) { config.ultimoBackup = agoraIso(); await salvarConfig(); if (!location.hash || location.hash === "#inicio") render(); }
       return;
     }
+    case "fg-excluir":
+      if (confirmarComSegundoToque(el, "Tocar de novo para excluir")) await excluirFotoGeral(el.dataset.id);
+      return;
     case "demo": return criarDemonstracao();
     case "wakelock": return alternarWakeLock(el);
   }
@@ -1427,6 +1556,21 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.acao === "foto" && el.files?.[0]) { adicionarFoto(el.files[0]); el.value = ""; }
   if (el.dataset.acao === "restaurar" && el.files?.[0]) { restaurar(el.files[0]); el.value = ""; }
+  if ((el.dataset.acao === "fg-camera" || el.dataset.acao === "fg-galeria") && el.files?.length) {
+    adicionarFotosGerais([...el.files], el.dataset.acao === "fg-galeria");
+    el.value = "";
+  }
+});
+
+document.addEventListener("input", (e) => {
+  const id = e.target.dataset?.fg;
+  if (!id) return;
+  const foto = fotosGerais.lista.find((f) => f.id === id);
+  if (!foto) return;
+  foto.legenda = e.target.value;
+  if (!fotosGerais.vistoriaId) return; // vistoria ainda não criada: grava ao começar
+  clearTimeout(temporizadoresLegenda[id]);
+  temporizadoresLegenda[id] = setTimeout(() => { const { url, ...r } = foto; BD.gravar("fotos", r); }, 500);
 });
 
 window.addEventListener("afterprint", () => {

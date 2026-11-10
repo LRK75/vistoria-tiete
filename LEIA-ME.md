@@ -16,12 +16,14 @@ Docker nem instalação de programas no computador.
     - dispositivos auxiliares, semáforos, suportes e serviços;
   - estado de conservação, ação recomendada, lado da via e quantidade (com cálculo de área em m²);
   - **fotos** tiradas pela câmera, com carimbo de data, hora e coordenadas.
+- Guarda **fotos gerais da vistoria** (vista do trecho, situação do local), tiradas pela câmera ou escolhidas da galeria, cada uma com sua observação.
 - Mostra o croqui dos pontos sem internet e o mapa do OpenStreetMap quando há conexão.
 - Gera o **Relatório Técnico em PDF** com as seções do relatório oficial:
   - identificação e fundamentação legal;
   - síntese, croqui e inventário;
   - quantitativo por volume do MBST;
-  - fotos e assinaturas.
+  - fotos gerais e fotos dos itens, com as observações;
+  - assinatura da Chefia do Departamento.
 - Exporta **planilha (CSV)**, **mapa (GeoJSON)** e **cópia de segurança (.json)**.
 
 Os dados ficam **somente no tablet**. Nenhuma informação é enviada a servidor algum.
@@ -72,7 +74,9 @@ Se a Prefeitura já tiver um site com https, a TI também pode copiar a pasta pa
    - **iPad (Safari):** botão **Compartilhar > Adicionar à Tela de Início**.
 3. Abra pelo ícone criado (losango amarelo com o marcador de localização).
 4. Na primeira vistoria, **permita** o acesso à **localização** e à **câmera** quando o tablet perguntar.
-5. Em **Configurações**, informe seu nome, matrícula e cargo.
+5. Em **Configurações**, informe:
+   - seu nome, matrícula e cargo;
+   - o nome do chefe do departamento, que assina o relatório.
 
 A partir daí o aplicativo abre e funciona **sem internet**.
 
@@ -82,7 +86,7 @@ A partir daí o aplicativo abre e funciona **sem internet**.
 
 | Passo | O que fazer |
 |---|---|
-| 1 | **Nova vistoria**: informe a rua e toque em *Começar vistoria* |
+| 1 | **Nova vistoria**: informe a rua. Em *Fotos gerais da vistoria*, tire ou escolha as fotos do local e escreva a observação de cada uma. Toque em *Começar vistoria* |
 | 2 | Pare junto ao sinal e aguarde o indicador de GPS ficar **verde** (precisão de até 5 m) |
 | 3 | Toque no ícone do sinal; use as abas ou a busca (ex.: `R-19`, `faixa`, `lombada`) |
 | 4 | Marque estado, ação e lado da via; ajuste a quantidade |
