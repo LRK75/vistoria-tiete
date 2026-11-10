@@ -100,7 +100,7 @@ const CONFIG_PADRAO = {
   vistoriadorNome: "", vistoriadorMatricula: "", vistoriadorCargo: "Agente de Trânsito",
   orgaoEnte: "PREFEITURA MUNICIPAL DE TIETÊ", orgaoUf: "Estado de São Paulo",
   orgaoUnidade: "Departamento de Trânsito, Engenharia e Fiscalização", municipio: "Tietê/SP",
-  chefeNome: "", chefeCargo: "Chefe do Departamento de Trânsito, Engenharia e Fiscalização",
+  chefeNome: "Luciano Rodrigues Kuehni", chefeCargo: "Chefe do Departamento de Trânsito, Engenharia e Fiscalização",
   metaGps: 5, carimbo: true, tema: "sistema", seq: 0, ultimoBackup: null, recentes: [],
 };
 let config = { ...CONFIG_PADRAO };
@@ -108,6 +108,8 @@ async function carregarConfig() {
   try {
     const r = await BD.um("kv", "config");
     if (r) config = { ...CONFIG_PADRAO, ...r.v };
+    // Tablets configurados antes: completa o nome do chefe do departamento
+    if (!config.chefeNome || config.chefeNome.trim() === "Luciano") config.chefeNome = CONFIG_PADRAO.chefeNome;
   } catch { /* primeira execução */ }
   aplicarTema();
 }
