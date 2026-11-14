@@ -32,7 +32,7 @@ function servicoOS(i, p) {
   return [verbo, ...p.tarefas].join(" ");
 }
 
-function modeloOS(v, itens, fotosPorItem, comFotos, os) {
+async function modeloOS(v, itens, fotosPorItem, comFotos, os) {
   const hoje = new Date();
   const local = [v.logradouro, v.bairro].filter(Boolean).join(", ");
   const todas = providenciasDaVistoria(itens);
@@ -58,19 +58,23 @@ function modeloOS(v, itens, fotosPorItem, comFotos, os) {
 
   b.push({ k: "secao", t: "1. SERVIÇOS A EXECUTAR" });
   if (sel.length) {
+    // Ícone de cada sinal, em tamanho médio, para a equipe reconhecer o tipo de placa ou marca
+    const icones = new Map();
+    for (const { i } of sel) if (!icones.has(i.materialCodigo) && POR_CODIGO[i.materialCodigo]) icones.set(i.materialCodigo, await iconePng(POR_CODIGO[i.materialCodigo]));
     const linhas = [];
     for (const c of prioUsadas) {
       linhas.push({ grupo: `Prioridade ${ROT_PRIO[c].toLowerCase()}: ${DIAS_PRIO[c] == null ? "concluir conforme o plano anual de manutenção" : `concluir até ${prazoOS(os, c)}`}` });
       for (const { i, n, p } of sel.filter((x) => x.p.prioridade === c)) {
         const m = _m(i);
         const ondeTxt = [i.lado ? `Lado ${ROT_LADO[i.lado].toLowerCase()}` : "", i.lat != null ? `${coord(i.lat)}\n${coord(i.lon)}` : "sem GPS: ver observação"].filter(Boolean).join("\n");
-        linhas.push([String(n), { t: m.mbst || m.cod, b: true, sub: m.desc }, ondeTxt,
+        linhas.push([String(n), { t: m.mbst || m.cod, b: true, sub: m.desc, a: "c", img: icones.get(i.materialCodigo) || null, imgW: 50 }, ondeTxt,
           { t: servicoOS(i, p), sub: i.observacao ? `Encontrado: ${ROT_ESTADO[i.estado].toLowerCase()}. ${i.observacao}` : `Encontrado: ${ROT_ESTADO[i.estado].toLowerCase()}.` },
-          `${qtd(i.quantidade)} ${UNIDADE[m.un] || ""}`, "☐"]);
+          `${qtd(i.quantidade)} ${UNIDADE[m.un] || ""}`, "", "☐", "☐"]);
       }
     }
-    b.push({ k: "tabela", cols: [{ t: "Nº", w: 4, a: "c" }, { t: "Sinal", w: 14 }, { t: "Onde", w: 15, a: "c" }, { t: "O que fazer", w: 50 }, { t: "Qtd.", w: 9, a: "c" }, { t: "Feito", w: 8, a: "c" }], linhas, s: 7.6, zebra: false });
-    b.push({ k: "nota", t: "Nº: número do item no Relatório Técnico de Vistoria. Onde: lado da via no sentido do tráfego e coordenadas GPS (latitude e longitude), que podem ser digitadas no aplicativo de mapas do celular." });
+    b.push({ k: "tabela", cols: [{ t: "Nº", w: 4, a: "c" }, { t: "Sinal e definição", w: 15, a: "c" }, { t: "Onde", w: 12, a: "c" }, { t: "O que fazer", w: 34 },
+      { t: "Qtd. prevista", w: 8, a: "c" }, { t: "Qtd. instalada", w: 8, a: "c" }, { t: "Executado", w: 9.5, a: "c" }, { t: "Não executado", w: 9.5, a: "c" }], linhas, s: 7.4, zebra: false });
+    b.push({ k: "nota", t: "Nº: número do item no Relatório Técnico de Vistoria. Onde: lado da via no sentido do tráfego e coordenadas GPS (latitude e longitude), que podem ser digitadas no aplicativo de mapas do celular. Qtd. instalada: preencher em campo. Não executado: marcar e informar o motivo no registro de execução." });
   } else {
     b.push({ k: "par", t: "Não há serviços nas prioridades selecionadas." });
   }
@@ -79,8 +83,9 @@ function modeloOS(v, itens, fotosPorItem, comFotos, os) {
   const quant = quantitativoVistoria(sel.map((x) => x.i));
   if (quant.linhas.length) {
     b.push({ k: "secao", t: "2. MATERIAIS A RETIRAR NO DEPÓSITO" });
-    b.push({ k: "tabela", cols: COLUNAS_QUANT, linhas: quant.linhas, s: 7.6, zebra: false });
-    b.push({ k: "nota", t: "Quantidades estimadas na vistoria. Conferir no local antes de cortar ou pintar; sobras retornam ao depósito." });
+    b.push({ k: "tabela", cols: COLUNAS_QUANT.map((c) => (c.t === "Quantidade" ? { ...c, t: "Quantidade retirada" } : c)),
+      linhas: quant.linhas.map((l) => (Array.isArray(l) ? [...l.slice(0, -1), ""] : l)), s: 7.6, zebra: false });
+    b.push({ k: "nota", t: "Quantidade retirada: preencher manualmente no depósito. Sobras retornam ao depósito ao final do serviço." });
   }
 
   b.push({ k: "secao", t: `${quant.linhas.length ? 3 : 2}. INSTRUÇÕES DE EXECUÇÃO E SEGURANÇA` });
@@ -156,11 +161,14 @@ async function abrirOrdemServico(id) {
     <article class="folha" id="folha"></article>`;
   r.hidden = false;
   r.scrollTop = 0;
-  const atualizar = () => {
+  let geracaoOS = 0;
+  const atualizar = async () => {
     const comFotos = $("#rel-fotos").checked;
     urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
     urlsRelatorio = [];
-    const modelo = modeloOS(v, itens, fotosPorItem, comFotos, os);
+    const g = ++geracaoOS;
+    const modelo = await modeloOS(v, itens, fotosPorItem, comFotos, os);
+    if (g !== geracaoOS || !$("#folha")) return;
     $("#folha").innerHTML = renderModeloHtml(modelo);
     const nome = `ordem_de_servico_${nomeBase(v).replace(/^vistoria_/, "")}${comFotos ? "" : "_sem_fotos"}`;
     prepararArquivos({

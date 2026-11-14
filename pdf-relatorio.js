@@ -130,7 +130,7 @@ async function motorPdf({ titulo, assunto, numero, rotulo, rodape }) {
 
   /** Tabela com quebra automática de página e repetição do cabeçalho.
    *  colunas: [{t, w, a: "c"|"l"}]; linha: array de células (texto ou {t, sub, b, cor, fill, a}) ou {grupo}. */
-  function tabela(colunas, linhas, { s = 7.6, zebra = true, x0 = ML, lw = LW, cabecalhoTab = true, chave = false } = {}) {
+  function tabela(colunas, linhas, { s = 7.6, zebra = true, x0 = ML, lw = LW, cabecalhoTab = true, chave = false, imagens = null } = {}) {
     const tot = colunas.reduce((a, c) => a + c.w, 0);
     const ws = colunas.map((c) => (c.w / tot) * lw);
     const pad = 3.2, lh = s * 1.28;
@@ -153,7 +153,7 @@ async function motorPdf({ titulo, assunto, numero, rotulo, rodape }) {
     linhas.forEach((ln, idx) => {
       if (ln && ln.grupo) {
         const alt = lh + 2 * pad;
-        if (caber(alt)) desenharCab();
+        if (caber(alt + 3 * lh + 2 * pad)) desenharCab(); // grupo não fica sozinho no pé da página
         E.pg.drawRectangle({ x: x0, y: E.y - alt, width: lw, height: alt, color: C.azulClaro, borderColor: C.borda, borderWidth: 0.5 });
         escrever(pdfTexto(ln.grupo), x0 + pad, base(E.y - pad, 0), FB, s);
         E.y -= alt;
@@ -165,15 +165,22 @@ async function motorPdf({ titulo, assunto, numero, rotulo, rodape }) {
         const w = ws[i] - 2 * pad;
         const linhasTxt = quebrar(o.t ?? "", f, s, w).map((l) => ({ l, f, c: o.cor ? cor(o.cor) : C.tinta }));
         const sub = o.sub ? quebrar(o.sub, F, s, w).map((l) => ({ l, f: F, c: C.tinta2 })) : [];
-        return { o, todas: [...linhasTxt, ...sub] };
+        // Imagem (ícone do sinal) acima do texto da célula
+        const img = o.img && imagens?.get(o.img);
+        const ih = img ? Math.min(o.imgW || 48, w) : 0;
+        return { o, todas: [...linhasTxt, ...sub], img, ih };
       });
-      const alt = Math.max(...cels.map((c) => c.todas.length)) * lh + 2 * pad;
+      const alt = Math.max(...cels.map((c) => c.todas.length * lh + (c.ih ? c.ih + 4 : 0))) + 2 * pad;
       if (caber(alt)) desenharCab();
       let x = x0;
       cels.forEach((cel, i) => {
         const fill = cel.o.fill ? cor(cel.o.fill) : chave && i === 0 ? C.azulClaro : zebra && idx % 2 ? C.cinza : null;
         E.pg.drawRectangle({ x, y: E.y - alt, width: ws[i], height: alt, ...(fill ? { color: fill } : {}), borderColor: C.borda, borderWidth: 0.5 });
-        const topo = E.y - (alt - cel.todas.length * lh) / 2;
+        let topo = E.y - (alt - cel.todas.length * lh - (cel.ih ? cel.ih + 4 : 0)) / 2;
+        if (cel.img) {
+          E.pg.drawImage(cel.img, { x: x + (ws[i] - cel.ih) / 2, y: topo - cel.ih, width: cel.ih, height: cel.ih });
+          topo -= cel.ih + 4;
+        }
         const a = cel.o.a ?? colunas[i].a;
         cel.todas.forEach((t, j) => {
           const tx = a === "c" ? x + (ws[i] - larg(t.l, t.f, s)) / 2 : x + pad;
@@ -448,6 +455,17 @@ async function gerarPdfRelatorio(v, itens, fotosPorItem, comFotos) {
 async function renderModeloPdf(modelo) {
   const E = await motorPdf(modelo.meta);
   const { FB, C } = E;
+  // Ícones das células de tabela: incorporados uma vez por documento
+  const imagens = new Map();
+  for (const b of modelo.blocos) {
+    if (b.k !== "tabela") continue;
+    for (const l of b.linhas) {
+      if (!Array.isArray(l)) continue;
+      for (const c of l) {
+        if (c?.img && !imagens.has(c.img)) imagens.set(c.img, await E.doc.embedPng(new Uint8Array(await c.img.arrayBuffer())));
+      }
+    }
+  }
   for (const b of modelo.blocos) {
     switch (b.k) {
       case "titulo":
@@ -459,7 +477,7 @@ async function renderModeloPdf(modelo) {
       case "par": E.paragrafo(b.t, { f: b.b ? FB : E.F, alinhar: b.alinhar || "justificar", recuo: b.recuo ? 18 : 0 }); break;
       case "lista": b.itens.forEach((t) => E.paragrafo(t, { recuo: 18, depois: 3 })); E.y -= 3; break;
       case "chave": E.tabela([{ t: "", w: 26 }, { t: "", w: 74 }], b.linhas, { s: 8.6, zebra: false, cabecalhoTab: false, chave: true }); break;
-      case "tabela": E.tabela(b.cols, b.linhas, { s: b.s || 7.6, zebra: b.zebra !== false }); break;
+      case "tabela": E.tabela(b.cols, b.linhas, { s: b.s || 7.6, zebra: b.zebra !== false, imagens }); break;
       case "nota": E.nota(b.t); break;
       case "fotos": await E.fotos(b.lista); break;
       case "assinatura": E.assinatura(b.nome, b.cargo, b.unidade); break;

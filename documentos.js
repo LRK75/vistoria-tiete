@@ -36,6 +36,30 @@ function quantitativoVistoria(itens) {
   return { linhas, nota };
 }
 
+// --------------------------------------------- ícone do sinal em PNG ----
+const _cacheIcone = new Map();
+/** Converte o ícone (SVG do catálogo) em PNG, para o PDF e o Word. */
+function iconePng(m, px = 256) {
+  const chave = `${m.cod}|${px}`;
+  if (!_cacheIcone.has(chave)) {
+    _cacheIcone.set(chave, new Promise((ok) => {
+      const svg = glifo(m).replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" `);
+      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+      const im = new Image();
+      im.onload = () => {
+        const cv = document.createElement("canvas");
+        cv.width = cv.height = px;
+        cv.getContext("2d").drawImage(im, 0, 0, px, px);
+        URL.revokeObjectURL(url);
+        cv.toBlob((b) => ok(b), "image/png");
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); ok(null); };
+      im.src = url;
+    }));
+  }
+  return _cacheIcone.get(chave);
+}
+
 // ------------------------------------------------------------- fotos ----
 /** Fotos gerais primeiro, depois as dos itens. legendaItem(i, k, p) permite acrescentar a providência. */
 function listaFotosRelatorio(itens, fotosPorItem, legendaItem = null) {
@@ -217,7 +241,9 @@ function _celHtml(c, col) {
   const a = (o.a ?? col?.a) === "c" ? ' class="c"' : "";
   const estilo = o.cor ? ` style="color:${o.cor};font-weight:700"` : "";
   const txt = esc(o.t ?? "").replace(/\n/g, "<br>");
-  return `<td${a}${estilo}>${o.b && !o.cor ? `<b>${txt}</b>` : txt}${o.sub ? `<br><span style="color:#555">${esc(o.sub)}</span>` : ""}</td>`;
+  let img = "";
+  if (o.img) { const u = URL.createObjectURL(o.img); urlsRelatorio.push(u); img = `<img class="icone-celula" src="${u}" alt="" style="width:${Math.round((o.imgW || 48) * 1.33)}px"><br>`; }
+  return `<td${a}${estilo}>${img}${o.b && !o.cor ? `<b>${txt}</b>` : txt}${o.sub ? `<br><span style="color:#555">${esc(o.sub)}</span>` : ""}</td>`;
 }
 function tabelaHtml(cols, linhas, { chave = false } = {}) {
   const tot = cols.reduce((a, c) => a + c.w, 0);
@@ -286,16 +312,26 @@ async function renderModeloDocx(modelo) {
     left: { style: BorderStyle.SINGLE, size: 4, color: BORDA }, right: { style: BorderStyle.SINGLE, size: 4, color: BORDA } };
   const semBorda = Object.fromEntries(["top", "bottom", "left", "right"].map((k) => [k, { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }]));
   const corpo = [];
+  const bytesImg = new Map();
+  for (const b of modelo.blocos) {
+    if (b.k !== "tabela") continue;
+    for (const l of b.linhas) if (Array.isArray(l)) for (const c of l) if (c?.img && !bytesImg.has(c.img)) bytesImg.set(c.img, new Uint8Array(await c.img.arrayBuffer()));
+  }
 
   const linhasTxt = (t, op = {}) => String(t ?? "").split("\n").map((l, k) => new T({ text: l, break: k ? 1 : 0, ...op }));
   function celula(c, col, w, { fill, cab = false, chave = false } = {}) {
     const o = c && typeof c === "object" ? c : { t: c };
     const alin = cab || (o.a ?? col?.a) === "c" ? AL.CENTER : AL.LEFT;
-    const filhos = [new P({ alignment: alin, spacing: { before: 0, after: 0 },
-      children: linhasTxt(o.t, { bold: cab || chave || !!o.b, color: cab ? "FFFFFF" : o.cor ? hex(o.cor) : undefined, size: 17 }) })];
+    const filhos = [];
+    if (o.img && bytesImg.has(o.img)) {
+      const px = Math.round((o.imgW || 48) * 1.33);
+      filhos.push(new P({ alignment: AL.CENTER, spacing: { before: 0, after: 40 }, children: [new D.ImageRun({ type: "png", data: bytesImg.get(o.img), transformation: { width: px, height: px } })] }));
+    }
+    filhos.push(new P({ alignment: alin, spacing: { before: 0, after: 0 },
+      children: linhasTxt(o.t, { bold: cab || chave || !!o.b, color: cab ? "FFFFFF" : o.cor ? hex(o.cor) : undefined, size: cab ? 15 : 17 }) }));
     if (o.sub) filhos.push(new P({ alignment: alin, spacing: { before: 0, after: 0 }, children: linhasTxt(o.sub, { color: "555555", size: 16 }) }));
     return new TableCell({ children: filhos, width: { size: w, type: WidthType.DXA }, borders: bordas,
-      margins: { top: 40, bottom: 40, left: 70, right: 70 },
+      margins: { top: 40, bottom: 40, left: cab ? 30 : 70, right: cab ? 30 : 70 },
       ...(fill ? { shading: { type: ShadingType.CLEAR, fill, color: "auto" } } : {}) });
   }
   function tabela(cols, linhas, { chave = false, zebra = true } = {}) {
