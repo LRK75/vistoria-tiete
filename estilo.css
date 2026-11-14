@@ -189,6 +189,20 @@ textarea { min-height: 84px; resize: vertical; }
 .item-linha .lado-dir { display: grid; justify-items: end; gap: 4px; font-size: 13px; color: var(--tinta-2); }
 .pilula { color: #fff; font-size: 13px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
 .sem-gps { color: var(--erro); font-weight: 600; }
+.prio { font-size: 12px; font-weight: 600; color: var(--cor); white-space: nowrap; }
+.prio::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); margin-right: 5px; }
+
+/* Providência indicada (ficha do item) */
+.providencia {
+  border: 1px solid var(--borda); border-left: 6px solid var(--cor); border-radius: var(--raio-p);
+  padding: 12px 14px; display: grid; gap: 8px; background: var(--papel); font-size: 15px;
+}
+.providencia p { margin: 0; }
+.prov-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prov-cab b { font-size: 16px; }
+.prov-fund { color: var(--tinta-2); font-size: 14px; }
+.prov-alerta { color: var(--erro); font-weight: 600; font-size: 14px; }
+.prov-alerta::before { content: "! "; }
 
 /* --------------------------------------------------------------- Ficha --- */
 .ficha { padding: 0; display: grid; }
@@ -347,7 +361,15 @@ textarea { min-height: 84px; resize: vertical; }
   padding-top: calc(10px + env(safe-area-inset-top, 0px)); background: var(--asfalto); color: #fff;
 }
 .rel-barra .dica { font-size: 14px; color: #c8d0d7; }
-.rel-barra .direita { margin-left: auto; display: flex; gap: 8px; }
+.rel-barra .direita { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.sec-form { display: grid; gap: 10px; font: 16px/1.4 var(--f-texto); }
+.sec-form textarea { min-height: 110px; }
+.sec-form .rotulo { font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.sec-form .rotulo small { font-weight: 400; color: #555; }
+.sec-dest { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 10px 12px; background: #eef2f8; border-radius: 6px; }
+.sec-dest span { color: #555; font-size: 14px; }
+.sec-dest .btn-texto { margin-left: auto; }
+.folha .quebra-pagina { break-before: page; height: 0; }
 .folha {
   --t: #1a1a1a; --t2: #555; --b: #a6a6a6; --az: #1f3864; --azc: #d9e2f3; --cz: #f2f2f2;
   width: 210mm; max-width: calc(100% - 24px); margin: 18px auto; background: #fff; color: var(--t);
@@ -392,7 +414,7 @@ textarea { min-height: 84px; resize: vertical; }
   body { background: #fff; }
   body > :not(#relatorio) { display: none !important; }
   #relatorio { position: static; overflow: visible; background: #fff; }
-  .rel-barra { display: none !important; }
+  .rel-barra, .sec-form { display: none !important; }
   .folha { width: auto; max-width: none; margin: 0; padding: 0; box-shadow: none; }
   .folha h2, .folha th, .folha .pilula, .folha td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .folha tr { break-inside: avoid; }

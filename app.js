@@ -101,6 +101,7 @@ const CONFIG_PADRAO = {
   orgaoEnte: "PREFEITURA MUNICIPAL DE TIETÊ", orgaoUf: "Estado de São Paulo",
   orgaoUnidade: "Departamento de Trânsito, Engenharia e Fiscalização", municipio: "Tietê/SP",
   chefeNome: "Luciano Rodrigues Kuehni", chefeCargo: "Chefe do Departamento de Trânsito, Engenharia e Fiscalização",
+  secretarioNome: "Giuliano Roberto Marcon", secretarioCargo: "Secretário de Segurança e Trânsito",
   metaGps: 5, carimbo: true, tema: "sistema", seq: 0, ultimoBackup: null, recentes: [],
 };
 let config = { ...CONFIG_PADRAO };
@@ -240,6 +241,7 @@ async function render() {
     if (rota === "config") return telaConfig();
     if (rota === "v" && id) {
       if (sub === "relatorio") { await telaVistoria(id, null); return abrirRelatorio(id); }
+      if (sub === "secretario") { await telaVistoria(id, null); return abrirRelatorioSecretario(id); }
       return await telaVistoria(id, sub === "item" ? extra : sub === "novo" ? "novo" : null);
     }
     return await telaInicio();
@@ -440,6 +442,7 @@ async function telaVistoria(id, abrirItem) {
             <div class="contagens">${chipsContagem(itens) || '<span class="meta">Nenhum item registrado ainda.</span>'}</div>
             <div class="botoes">
               <button class="btn btn-primario" data-acao="ir" data-destino="#v/${v.id}/relatorio" ${itens.length ? "" : "disabled"}>Relatório (PDF)</button>
+              <button class="btn btn-primario" data-acao="ir" data-destino="#v/${v.id}/secretario" ${itens.length ? "" : "disabled"}>Relatório ao Secretário</button>
               <button class="btn" data-acao="exportar" ${itens.length ? "" : "disabled"}>Exportar</button>
               <button class="btn" data-acao="status">${v.status === "CONCLUIDA" ? "Reabrir" : "Concluir vistoria"}</button>
             </div>
@@ -478,6 +481,7 @@ function linhaItem(i, k) {
     <span style="min-width:0"><span class="tit"><span class="cod">${esc(m.mbst || m.cod)}</span>${esc(m.desc)}</span>
       <span class="sub">${ROT_ESTADO[i.estado]}, ${qtd(i.quantidade)} ${UNIDADE[m.un] || ""}${i.lado ? `, lado ${ROT_LADO[i.lado].toLowerCase()}` : ""}${i.observacao ? `. ${esc(i.observacao.slice(0, 60))}` : ""}</span></span>
     <span class="lado-dir"><span class="pilula" style="background:${COR_ACAO[i.acao]}">${ROT_ACAO[i.acao]}</span>
+      ${(() => { const p = providenciaItem(i); return p.prioridade === "NENHUMA" ? "" : `<span class="prio" style="--cor:${COR_PRIO[p.prioridade]}">Prioridade ${ROT_PRIO[p.prioridade].toLowerCase()}</span>`; })()}
       <span>${i.lat == null ? '<span class="sem-gps">sem GPS</span>' : `±${nf(i.precisao ?? 0, 0)} m`}${i.fotos?.length ? `, ${i.fotos.length} foto${i.fotos.length > 1 ? "s" : ""}` : ""}</span></span>
   </button></li>`;
 }
@@ -590,6 +594,7 @@ function renderFicha() {
         <label class="rotulo" for="obs">Observação</label>
         <textarea id="obs" maxlength="2000" placeholder="Ex.: película desbotada, placa obstruída por árvore">${esc(f.observacao)}</textarea>
       </div>
+      <div class="bloco" id="providencia" aria-live="polite"></div>
       <div id="area-confirmar"></div>
     </div>
     <div class="ficha-rodape">
@@ -599,6 +604,7 @@ function renderFicha() {
   atualizarSelecionado();
   atualizarGrade();
   atualizarFotos();
+  atualizarProvidencia();
   atualizarIndicadoresGps(GPS.melhor(), GPS.qualidade(GPS.melhor()));
 
   $("#busca-sinal").addEventListener("input", (e) => {
@@ -607,7 +613,8 @@ function renderFicha() {
     atualizarGrade();
   });
   $("#qtd").addEventListener("input", (e) => { f.quantidade = e.target.value; });
-  $("#obs").addEventListener("input", (e) => { f.observacao = e.target.value; });
+  let tObs;
+  $("#obs").addEventListener("input", (e) => { f.observacao = e.target.value; clearTimeout(tObs); tObs = setTimeout(atualizarProvidencia, 400); });
   for (const idCampo of ["compr", "larg"]) {
     $(`#${idCampo}`).addEventListener("input", (e) => {
       f[idCampo] = e.target.value;
@@ -667,6 +674,21 @@ function atualizarGrade() {
   if (contagem) contagem.textContent = q ? `${lista.length} encontrado(s)` : `${lista.length} itens nesta aba`;
 }
 
+/** Quadro "Providência indicada": o que fazer, prazo e fundamento legal, conforme o preenchimento. */
+function atualizarProvidencia() {
+  const caixa = $("#providencia");
+  const f = estado.ficha;
+  if (!caixa || !f) return;
+  if (!f.material) { caixa.innerHTML = ""; return; }
+  const p = providenciaItem({ materialCodigo: f.material, estado: f.estado, acao: f.acao, observacao: f.observacao, fotos: f.fotos });
+  caixa.innerHTML = `<div class="providencia" style="--cor:${COR_PRIO[p.prioridade]}">
+    <div class="prov-cab"><b>Providência indicada</b><span class="pilula" style="background:${COR_PRIO[p.prioridade]}">${ROT_PRIO[p.prioridade]}${p.prioridade === "NENHUMA" ? "" : `, ${p.prazo}`}</span></div>
+    <p>${esc(p.texto)}</p>
+    <div class="prov-fund"><b>Fundamento:</b> ${esc(refsNormas(p.normas))}</div>
+    ${p.alertas.map((a) => `<div class="prov-alerta">${esc(a)}</div>`).join("")}
+  </div>`;
+}
+
 function atualizarFotos() {
   const f = estado.ficha;
   $("#fotos").innerHTML = f.fotos.map((foto, k) => `
@@ -674,6 +696,7 @@ function atualizarFotos() {
       <button data-acao="remover-foto" data-k="${k}" aria-label="Remover foto ${k + 1}">×</button></div>`).join("") + `
     <label class="btn btn-grande botao-foto">${f.fotos.length ? "Mais uma foto" : "Tirar foto"}
       <input type="file" accept="image/*" capture="environment" data-acao="foto"></label>`;
+  atualizarProvidencia();
 }
 
 async function adicionarFoto(arquivo) {
@@ -1006,17 +1029,17 @@ async function excluirFotoGeral(id) {
 
 // ============================================================ Relatório ==
 let urlsRelatorio = [];
-const pdfRel = { arquivo: null, geracao: 0 }; // PDF pronto para enviar
+const pdfRel = { arquivo: null, word: null, geracao: 0, titulo: "", texto: "" }; // arquivos prontos para enviar
 function fecharRelatorio() {
   const r = $("#relatorio");
   pdfRel.geracao++;
-  pdfRel.arquivo = null;
+  pdfRel.arquivo = pdfRel.word = null;
   if (r && !r.hidden) { r.hidden = true; r.innerHTML = ""; }
   urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
   urlsRelatorio = [];
 }
 
-async function abrirRelatorio(id) {
+async function dadosRelatorio(id) {
   const v = await BD.um("vistorias", id);
   const itens = await itensDa(id);
   const fotos = await BD.porIndice("fotos", "vistoriaId", id);
@@ -1025,74 +1048,148 @@ async function abrirRelatorio(id) {
     if (f.itemId) (fotosPorItem[f.itemId] ||= []).push(f);
   }
   fotosPorItem[GERAIS] = ordenarFotosGerais(fotos.filter((f) => !f.itemId));
-  const r = $("#relatorio");
-  r.innerHTML = `
-    <div class="rel-barra">
+  return { v, itens, fotosPorItem };
+}
+
+function barraRelatorio(id, { word = false, imprimir = true } = {}) {
+  return `<div class="rel-barra">
       <button class="btn" data-acao="ir" data-destino="#v/${id}">Voltar à vistoria</button>
       <span class="dica" id="rel-status">Preparando o PDF...</span>
       <div class="direita">
         <label class="interruptor" style="min-height:44px;color:#fff"><input type="checkbox" id="rel-fotos" checked> Incluir fotos</label>
         <button class="btn btn-primario" id="rel-enviar" disabled hidden>Enviar PDF</button>
         <button class="btn" id="rel-baixar" disabled>Salvar PDF</button>
-        <button class="btn" data-acao="imprimir">Imprimir</button>
+        ${word ? '<button class="btn" id="rel-word" disabled>Word (.docx)</button>' : ""}
+        ${imprimir ? '<button class="btn" data-acao="imprimir">Imprimir</button>' : ""}
       </div>
-    </div>
+    </div>`;
+}
+
+/** Liga os botões Enviar / Salvar / Word da barra ao arquivo já preparado. */
+function ligarBarraRelatorio() {
+  // O compartilhamento precisa partir do toque do usuário: por isso o PDF é gerado antes,
+  // e o botão chama navigator.share sem esperar nada.
+  $("#rel-enviar").addEventListener("click", () => compartilharArquivo(pdfRel.arquivo));
+  $("#rel-baixar").addEventListener("click", () => { if (pdfRel.arquivo) entregar(pdfRel.arquivo.name, pdfRel.arquivo, false); });
+  $("#rel-word")?.addEventListener("click", () => {
+    if (!pdfRel.word) return;
+    if (podeCompartilhar(pdfRel.word)) compartilharArquivo(pdfRel.word);
+    else entregar(pdfRel.word.name, pdfRel.word, false);
+  });
+}
+
+async function abrirRelatorio(id) {
+  const { v, itens, fotosPorItem } = await dadosRelatorio(id);
+  const r = $("#relatorio");
+  r.innerHTML = `${barraRelatorio(id)}
     <article class="folha" id="folha">${htmlRelatorio(v, itens, fotosPorItem, true)}</article>`;
   r.hidden = false;
   r.scrollTop = 0;
+  const preparar = (comFotos) => prepararArquivos({
+    pdf: () => gerarPdfRelatorio(v, itens, fotosPorItem, comFotos),
+    nome: `relatorio_${nomeBase(v)}${comFotos ? "" : "_sem_fotos"}`,
+    titulo: `Relatório de vistoria nº ${v.protocolo}`,
+    texto: `Relatório Técnico de Vistoria nº ${v.protocolo}, ${v.logradouro}${v.bairro ? `, ${v.bairro}` : ""}.`,
+  });
   $("#rel-fotos").addEventListener("change", (e) => {
     urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
     urlsRelatorio = [];
     $("#folha").innerHTML = htmlRelatorio(v, itens, fotosPorItem, e.target.checked);
-    prepararPdf(v, itens, fotosPorItem, e.target.checked);
+    preparar(e.target.checked);
   });
-  // O compartilhamento precisa partir do toque do usuário: por isso o PDF é gerado antes,
-  // e o botão chama navigator.share sem esperar nada.
-  $("#rel-enviar").addEventListener("click", () => enviarPdfRelatorio(v));
-  $("#rel-baixar").addEventListener("click", () => { if (pdfRel.arquivo) entregar(pdfRel.arquivo.name, pdfRel.arquivo, false); });
+  ligarBarraRelatorio();
   document.title = `Vistoria ${v.protocolo.replace("/", "-")} - ${v.logradouro}`;
-  prepararPdf(v, itens, fotosPorItem, true);
+  preparar(true);
 }
 
-// ------------------------------------------------- PDF para compartilhar ----
-async function prepararPdf(v, itens, fotosPorItem, comFotos) {
+/** Relatório Técnico ao Secretário: providências, prioridades e fundamento legal. */
+async function abrirRelatorioSecretario(id) {
+  const { v, itens, fotosPorItem } = await dadosRelatorio(id);
+  const r = $("#relatorio");
+  r.innerHTML = `${barraRelatorio(id, { word: true, imprimir: false })}
+    <div class="folha sec-form">
+      <div class="sec-dest"><span>Destinatário</span><b>${esc(nomeSecretario())}</b>${esc(config.secretarioCargo)}
+        <button class="btn-texto" data-acao="ir" data-destino="#config">Alterar em Configurações</button></div>
+      <label class="rotulo" for="sec-parecer">Considerações do Departamento <small>opcional; entram como seção própria do relatório</small></label>
+      <textarea id="sec-parecer" maxlength="4000" placeholder="Ex.: histórico de acidentes no local, pedidos de munícipes, existência de ata de registro de preços vigente">${esc(v.parecer || "")}</textarea>
+    </div>
+    <article class="folha" id="folha"></article>`;
+  r.hidden = false;
+  r.scrollTop = 0;
+  const atualizar = () => {
+    const comFotos = $("#rel-fotos").checked;
+    urlsRelatorio.forEach((u) => URL.revokeObjectURL(u));
+    urlsRelatorio = [];
+    const modelo = modeloSecretario(v, itens, fotosPorItem, comFotos);
+    $("#folha").innerHTML = renderModeloHtml(modelo);
+    const nome = `relatorio_secretario_${nomeBase(v).replace(/^vistoria_/, "")}${comFotos ? "" : "_sem_fotos"}`;
+    prepararArquivos({
+      pdf: () => renderModeloPdf(modelo), word: () => renderModeloDocx(modelo), nome,
+      titulo: `Relatório Técnico nº ${v.protocolo} ao Secretário`,
+      texto: `Relatório Técnico nº ${v.protocolo}: providências para a sinalização viária de ${v.logradouro}${v.bairro ? `, ${v.bairro}` : ""}.`,
+    });
+  };
+  let t;
+  $("#sec-parecer").addEventListener("input", (e) => {
+    v.parecer = e.target.value;
+    clearTimeout(t);
+    t = setTimeout(async () => { await BD.gravar("vistorias", v); atualizar(); }, 900);
+  });
+  $("#rel-fotos").addEventListener("change", atualizar);
+  ligarBarraRelatorio();
+  document.title = `Relatório ${v.protocolo.replace("/", "-")} ao Secretário - ${v.logradouro}`;
+  atualizar();
+}
+
+// ------------------------------------------- arquivos para compartilhar ----
+const _tamanho = (b) => (b.size > 1048576 ? `${nf(b.size / 1048576, 1)} MB` : `${nf(Math.max(1, b.size / 1024), 0)} KB`);
+
+async function prepararArquivos({ pdf, word = null, nome, titulo, texto }) {
   const g = ++pdfRel.geracao;
-  pdfRel.arquivo = null;
-  const st = $("#rel-status"), bE = $("#rel-enviar"), bB = $("#rel-baixar");
+  Object.assign(pdfRel, { arquivo: null, word: null, titulo, texto });
+  const st = $("#rel-status"), bE = $("#rel-enviar"), bB = $("#rel-baixar"), bW = $("#rel-word");
   if (!st) return;
   st.textContent = "Preparando o PDF...";
   bE.disabled = bB.disabled = true;
+  if (bW) bW.disabled = true;
+  const vigente = () => g === pdfRel.geracao && $("#rel-status");
+  let comp = false;
   try {
-    const blob = await gerarPdfRelatorio(v, itens, fotosPorItem, comFotos);
-    if (g !== pdfRel.geracao || !$("#rel-status")) return;
-    const nome = `relatorio_${nomeBase(v)}${comFotos ? "" : "_sem_fotos"}.pdf`;
-    pdfRel.arquivo = new File([blob], nome, { type: "application/pdf" });
-    const comp = podeCompartilhar(pdfRel.arquivo);
+    const blob = await pdf();
+    if (!vigente()) return;
+    pdfRel.arquivo = new File([blob], `${nome}.pdf`, { type: "application/pdf" });
+    comp = podeCompartilhar(pdfRel.arquivo);
     bE.hidden = !comp;
     bE.disabled = bB.disabled = false;
-    const tam = blob.size > 1048576 ? `${nf(blob.size / 1048576, 1)} MB` : `${nf(Math.max(1, blob.size / 1024), 0)} KB`;
     st.innerHTML = comp
-      ? `PDF pronto (${tam}). <b>Enviar PDF</b>: WhatsApp, e-mail, Drive, Arquivos e outros.`
-      : `PDF pronto (${tam}). Toque em <b>Salvar PDF</b>.`;
+      ? `PDF pronto (${_tamanho(blob)}). <b>Enviar PDF</b>: WhatsApp, e-mail, Drive, Arquivos e outros.`
+      : `PDF pronto (${_tamanho(blob)}). Toque em <b>Salvar PDF</b>.`;
   } catch (e) {
-    if (g !== pdfRel.geracao || !$("#rel-status")) return;
+    if (!vigente()) return;
     console.error(e);
-    st.innerHTML = "Não foi possível gerar o PDF. Use <b>Imprimir</b> e escolha <b>Salvar como PDF</b>.";
+    st.innerHTML = word ? "Não foi possível gerar o PDF." : "Não foi possível gerar o PDF. Use <b>Imprimir</b> e escolha <b>Salvar como PDF</b>.";
+  }
+  if (!word) return;
+  try {
+    const blob = await word();
+    if (!vigente()) return;
+    pdfRel.word = new File([blob], `${nome}.docx`, { type: blob.type });
+    bW.disabled = false;
+    st.innerHTML += ` Word pronto (${_tamanho(blob)}).`;
+  } catch (e) {
+    if (!vigente()) return;
+    console.error(e);
+    st.innerHTML += " Não foi possível gerar o Word.";
   }
 }
 
-async function enviarPdfRelatorio(v) {
-  const arq = pdfRel.arquivo;
+async function compartilharArquivo(arq) {
   if (!arq) return;
   try {
-    await navigator.share({
-      files: [arq],
-      title: `Relatório de vistoria nº ${v.protocolo}`,
-      text: `Relatório Técnico de Vistoria nº ${v.protocolo}, ${v.logradouro}${v.bairro ? `, ${v.bairro}` : ""}.`,
-    });
+    await navigator.share({ files: [arq], title: pdfRel.titulo, text: pdfRel.texto });
   } catch (e) {
     if (e.name === "AbortError") return;
-    if (e.name === "NotAllowedError") return toast("Toque novamente em Enviar PDF.");
+    if (e.name === "NotAllowedError") return toast("Toque novamente no botão.");
     entregar(arq.name, arq, false);
   }
 }
@@ -1153,6 +1250,7 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
   }
   const nTotalFotos = itens.reduce((s, i) => s + (fotosPorItem[i.id]?.length || 0), 0) + (fotosPorItem[GERAIS]?.length || 0);
   let sec = 6;
+  const prov = tabelaProvidencias(itens);
 
   return `
     <header class="cab-orgao">
@@ -1210,6 +1308,10 @@ function htmlRelatorio(v, itens, fotosPorItem, comFotos) {
     : "<p>Não foram identificados itens que demandem intervenção.</p>"}
 
     ${figuras ? `<h2>${++sec}. REGISTRO FOTOGRÁFICO</h2><div class="fotos-rel">${figuras}</div>` : ""}
+
+    <h2>${++sec}. PROVIDÊNCIAS INDICADAS E FUNDAMENTO LEGAL</h2>
+    ${prov.linhas.length ? `${tabelaHtml(prov.colunas, prov.linhas)}<p class="nota">${esc(prov.nota)}</p>`
+      : "<p>Todos os itens vistoriados encontram-se em bom estado. Recomenda-se mantê-los na inspeção periódica da sinalização.</p>"}
 
     <div class="bloco-final">
       <h2>${++sec}. OBSERVAÇÕES GERAIS</h2>
@@ -1381,6 +1483,11 @@ function telaConfig() {
           <label class="campo">Cargo <input class="campo-texto" id="c-chefe-cargo" value="${esc(c.chefeCargo)}"></label>
         </div>
         <div class="cartao secao-form">
+          <h3>Destinatário do relatório ao Secretário</h3>
+          <label class="campo">Nome do Secretário <input class="campo-texto" id="c-sec-nome" value="${esc(c.secretarioNome)}"></label>
+          <label class="campo">Cargo <input class="campo-texto" id="c-sec-cargo" value="${esc(c.secretarioCargo)}"></label>
+        </div>
+        <div class="cartao secao-form">
           <h3>Órgão (cabeçalho do relatório)</h3>
           <label class="campo">Ente <input class="campo-texto" id="c-ente" value="${esc(c.orgaoEnte)}"></label>
           <div class="duas">
@@ -1417,6 +1524,7 @@ function telaConfig() {
     Object.assign(config, {
       vistoriadorNome: val("#c-nome"), vistoriadorMatricula: val("#c-matricula"), vistoriadorCargo: val("#c-cargo"),
       chefeNome: val("#c-chefe-nome"), chefeCargo: val("#c-chefe-cargo") || "Chefe do Departamento",
+      secretarioNome: val("#c-sec-nome"), secretarioCargo: val("#c-sec-cargo") || "Secretário de Segurança e Trânsito",
       orgaoEnte: val("#c-ente"), orgaoUf: val("#c-uf"), municipio: val("#c-municipio") || "Tietê/SP", orgaoUnidade: val("#c-unidade"),
       metaGps: Number($("#c-meta").value), carimbo: $("#c-carimbo").checked, tema: $("#c-tema").value,
     });
@@ -1544,13 +1652,14 @@ document.addEventListener("click", async (e) => {
       if (m.grupo !== f.cat && !f.busca) { f.cat = m.grupo; $$(".aba").forEach((a) => a.setAttribute("aria-pressed", String(a.dataset.cat === f.cat))); }
       atualizarSelecionado();
       atualizarGrade();
+      atualizarProvidencia();
       $("#area-confirmar").innerHTML = "";
       return;
     }
     case "campo":
       f[el.dataset.campo] = el.dataset.valor;
       $$(`[data-acao="campo"][data-campo="${el.dataset.campo}"]`).forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
-      return;
+      return atualizarProvidencia();
     case "qtd": {
       const atual = parseFloat(String(f.quantidade).replace(",", ".")) || 0;
       const m = POR_CODIGO[f.material];

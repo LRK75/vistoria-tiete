@@ -26,6 +26,12 @@ Docker nem instalação de programas no computador.
   - assinatura da Chefia do Departamento.
 - **Envia o PDF direto** pelo menu de compartilhamento do tablet (WhatsApp, e-mail, Google Drive,
   Salvar em Arquivos, Bluetooth e outros), também sem internet para gerar o arquivo.
+- Indica, para cada item, a **providência conforme a legislação vigente** (CTB, Res. CONTRAN
+  nº 973/2022, normas ABNT), com **prioridade e prazo** sugeridos e o **fundamento legal**. O quadro
+  aparece na ficha do item e muda conforme o estado, a ação e a observação (ex.: "árvore", "propaganda", "buraco").
+- Gera o **Relatório Técnico ao Secretário de Segurança e Trânsito** (PDF e Word), com
+  fundamentação legal, diagnóstico, providências por item, plano de ação, riscos da não execução,
+  propostas para deliberação e registro fotográfico.
 - Exporta **planilha (CSV)**, **mapa (GeoJSON)** e **cópia de segurança (.json)**.
 
 Os dados ficam **somente no tablet**. Nenhuma informação é enviada a servidor algum.
@@ -94,7 +100,9 @@ A partir daí o aplicativo abre e funciona **sem internet**.
 | 4 | Marque estado, ação e lado da via; ajuste a quantidade |
 | 5 | **Tirar foto**: enquadre o sinal, evitando pessoas e placas de veículos |
 | 6 | **Salvar item**. Para o próximo sinal igual, use **Repetir último** |
-| 7 | Ao terminar: **Concluir vistoria** e **Relatório (PDF)**. Aguarde *PDF pronto* e toque em **Enviar PDF** (escolha WhatsApp, e-mail, Drive etc.) ou **Salvar PDF** |
+| 7 | Confira o quadro **Providência indicada** na ficha de cada item |
+| 8 | Ao terminar: **Concluir vistoria** e **Relatório (PDF)**. Aguarde *PDF pronto* e toque em **Enviar PDF** (escolha WhatsApp, e-mail, Drive etc.) ou **Salvar PDF** |
+| 9 | **Relatório ao Secretário**: escreva, se quiser, as *Considerações do Departamento* e envie em PDF ou Word |
 
 Dicas:
 - O botão **Tela ligada** impede que a tela apague durante a vistoria.
@@ -144,7 +152,9 @@ As vistorias já gravadas **não** são afetadas pela atualização.
 | `catalogo.js` | Catálogo de sinais (códigos MBST, Res. CONTRAN nº 973/2022), estados e ações |
 | `glifos.js` | Desenho dos ícones das placas e marcas |
 | `estilo.css` | Aparência, incluindo o layout de impressão do relatório |
-| `pdf-relatorio.js`, `lib/` | Geração do arquivo PDF no tablet (biblioteca pdf-lib, licença MIT) |
+| `providencias.js` | Regras das providências, prioridades, prazos e dispositivos legais citados |
+| `documentos.js` | Relatório ao Secretário (prévia, PDF e Word) |
+| `pdf-relatorio.js`, `lib/` | Geração de PDF e Word no tablet (bibliotecas pdf-lib e docx, licença MIT) |
 | `sw.js` | Funcionamento sem internet (*service worker*) |
 | `manifest.webmanifest`, `icones/` | Instalação na tela inicial |
 
