@@ -32,6 +32,9 @@ Docker nem instalação de programas no computador.
 - Gera o **Relatório Técnico ao Secretário de Segurança e Trânsito** (PDF e Word), com
   fundamentação legal, diagnóstico, providências por item, plano de ação, riscos da não execução,
   propostas para deliberação e registro fotográfico.
+- Emite a **Ordem de Serviço** para as equipes de execução (PDF e Word): o que fazer em cada
+  sinal, onde (lado e coordenadas), quantidade, data-limite por prioridade, materiais a retirar,
+  instruções de segurança, registro de execução para preencher em campo e assinaturas da equipe.
 - Exporta **planilha (CSV)**, **mapa (GeoJSON)** e **cópia de segurança (.json)**.
 
 Os dados ficam **somente no tablet**. Nenhuma informação é enviada a servidor algum.
@@ -103,6 +106,7 @@ A partir daí o aplicativo abre e funciona **sem internet**.
 | 7 | Confira o quadro **Providência indicada** na ficha de cada item |
 | 8 | Ao terminar: **Concluir vistoria** e **Relatório (PDF)**. Aguarde *PDF pronto* e toque em **Enviar PDF** (escolha WhatsApp, e-mail, Drive etc.) ou **Salvar PDF** |
 | 9 | **Relatório ao Secretário**: escreva, se quiser, as *Considerações do Departamento* e envie em PDF ou Word |
+| 10 | Autorizado pelo Secretário: **Ordem de Serviço**. Informe a equipe, a autorização e as prioridades incluídas; envie à equipe em PDF ou Word |
 
 Dicas:
 - O botão **Tela ligada** impede que a tela apague durante a vistoria.
@@ -154,6 +158,7 @@ As vistorias já gravadas **não** são afetadas pela atualização.
 | `estilo.css` | Aparência, incluindo o layout de impressão do relatório |
 | `providencias.js` | Regras das providências, prioridades, prazos e dispositivos legais citados |
 | `documentos.js` | Relatório ao Secretário (prévia, PDF e Word) |
+| `ordem-servico.js` | Ordem de Serviço às equipes de execução |
 | `pdf-relatorio.js`, `lib/` | Geração de PDF e Word no tablet (bibliotecas pdf-lib e docx, licença MIT) |
 | `sw.js` | Funcionamento sem internet (*service worker*) |
 | `manifest.webmanifest`, `icones/` | Instalação na tela inicial |

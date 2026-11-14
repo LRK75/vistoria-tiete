@@ -26,6 +26,8 @@ const ROT_PRIO = Object.fromEntries(PRIORIDADES.map((p) => [p[0], p[1]]));
 const PRAZO_PRIO = Object.fromEntries(PRIORIDADES.map((p) => [p[0], p[2]]));
 const COR_PRIO = Object.fromEntries(PRIORIDADES.map((p) => [p[0], p[3]]));
 const ORDEM_PRIO = Object.fromEntries(PRIORIDADES.map((p, k) => [p[0], k]));
+// Dias corridos para concluir, contados do início da ordem de serviço (null = plano anual)
+const DIAS_PRIO = { IMEDIATA: 3, ALTA: 30, MEDIA: 90, PROGRAMADA: null, NENHUMA: null };
 
 /** Dispositivos legais citados. ref: forma curta; txt: conteúdo, para o quadro do relatório. */
 const NORMAS = {
@@ -173,22 +175,27 @@ function providenciaItem(i) {
 
   // Situações descritas na observação
   const extras = [];
+  const tarefas = []; // tarefas curtas para a ordem de serviço
   if (/vegeta|árvore|arvore|galho|mato|arbust|folhag/.test(obs)) {
     extras.push("Providenciar a poda da vegetação que encobre a sinalização; se em imóvel particular, notificar o responsável.");
+    tarefas.push("Podar a vegetação que encobre o sinal (se em imóvel particular, não podar: comunicar a chefia para notificação).");
     normas.push("ctb81", "ctb84");
     prioridade = _maisUrgente(prioridade, crit === "critica" ? "IMEDIATA" : "ALTA");
   }
   if (/publicidade|propaganda|cartaz|faixa de pano|banner|adesivo|picha|grafit/.test(obs)) {
     extras.push("Retirar publicidade, inscrições ou adesivos afixados na sinalização ou no suporte, com ônus para quem os colocou.");
+    tarefas.push("Retirar adesivos, cartazes ou inscrições da placa e do suporte.");
     normas.push("ctb82", "ctb84");
     prioridade = _maisUrgente(prioridade, "ALTA");
   }
   if (/\bobra|caçamba|cacamba|tapume|interdi/.test(obs)) {
     extras.push("Verificar a permissão da obra ou interdição e exigir do responsável a sinalização temporária.");
+    tarefas.push("Verificar se a obra ou interdição está sinalizada e comunicar a chefia.");
     normas.push("ctb95", "mbst7");
   }
   if (/buraco|obst[aá]culo|cratera|desn[ií]vel|bueiro|tampa/.test(obs)) {
     extras.push("Sinalizar imediatamente o obstáculo e acionar o setor responsável pelo reparo.");
+    tarefas.push("Sinalizar o obstáculo com cones ou cavaletes e comunicar a chefia.");
     normas.push("ctb94");
     prioridade = _maisUrgente(prioridade, "IMEDIATA");
   }
@@ -202,7 +209,8 @@ function providenciaItem(i) {
 
   const ordem = Object.keys(NORMAS);
   normas = [...new Set([...normas, ..._normasDoTipo(m)])].sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
-  return { prioridade, prazo: PRAZO_PRIO[prioridade], criticidade: crit, texto, normas, alertas };
+  if (prioridade === "IMEDIATA") tarefas.unshift("Instalar sinalização provisória (cones, cavaletes ou placa móvel) até concluir o serviço.");
+  return { prioridade, prazo: PRAZO_PRIO[prioridade], criticidade: crit, texto, normas, alertas, tarefas };
 }
 
 /** Referências curtas, em texto corrido. */

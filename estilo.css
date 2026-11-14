@@ -369,6 +369,10 @@ textarea { min-height: 84px; resize: vertical; }
 .sec-dest { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 10px 12px; background: #eef2f8; border-radius: 6px; }
 .sec-dest span { color: #555; font-size: 14px; }
 .sec-dest .btn-texto { margin-left: auto; }
+.sec-form .os-prios { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.sec-form .duas { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+@media (max-width: 700px) { .sec-form .duas { grid-template-columns: 1fr; } }
+.sec-form .campo small { font-weight: 400; color: #555; }
 .folha .quebra-pagina { break-before: page; height: 0; }
 .folha {
   --t: #1a1a1a; --t2: #555; --b: #a6a6a6; --az: #1f3864; --azc: #d9e2f3; --cz: #f2f2f2;
@@ -402,6 +406,9 @@ textarea { min-height: 84px; resize: vertical; }
 .folha .assin { display: flex; justify-content: center; margin-top: 48px; text-align: center; font-size: 9pt; }
 .folha .assin div { min-width: 60%; }
 .folha .assin div { border-top: .75pt solid #333; padding-top: 4px; }
+.folha .grade-assin { display: grid; grid-template-columns: 1fr 1fr; gap: 44px 30px; }
+.folha .grade-assin div { min-width: 0; }
+.folha .grade-assin i { color: #555; font-size: 8pt; }
 .folha .bloco-final { break-inside: avoid; }
 .folha .pilula { font-size: 7.5pt; padding: 1px 6px; }
 

@@ -22,7 +22,7 @@ function carregarPdfLib() {
 // As fontes padrão do PDF (Helvetica) usam a codificação WinAnsi: acentos do português
 // funcionam; alguns símbolos precisam ser trocados.
 const _WINANSI_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
-const _TROCAS = { "→": "->", "←": "<-", "↔": "<->", "−": "-", "≤": "<=", "≥": ">=", "▭": "", " ": " ", " ": " " };
+const _TROCAS = { "☐": "[\u00a0\u00a0\u00a0\u00a0]", "→": "->", "←": "<-", "↔": "<->", "−": "-", "≤": "<=", "≥": ">=", "▭": "", " ": " ", " ": " " };
 function pdfTexto(t) {
   let r = "";
   for (const c of String(t ?? "")) {
@@ -237,6 +237,27 @@ async function motorPdf({ titulo, assunto, numero, rotulo, rodape }) {
     if (unidade && !String(cargo || "").includes(unidade)) paragrafo(unidade, { s: 8.8, alinhar: "centro", depois: 0 });
   }
 
+  /** Várias assinaturas em duas colunas. lista: [{rotulo, nome, cargo}]. */
+  function assinaturas(lista) {
+    const cw = (LW - 30) / 2;
+    for (let k = 0; k < lista.length; k += 2) {
+      caber(80);
+      E.y -= 40;
+      const yLinha = E.y;
+      let menor = yLinha;
+      lista.slice(k, k + 2).forEach((a, j) => {
+        const x0 = ML + j * (cw + 30);
+        E.pg.drawLine({ start: { x: x0, y: yLinha }, end: { x: x0 + cw, y: yLinha }, thickness: 0.8, color: C.tinta });
+        E.y = yLinha - 2;
+        if (a.rotulo) paragrafo(a.rotulo, { s: 7.6, c: C.tinta2, alinhar: "centro", depois: 0, x0, lw: cw });
+        paragrafo(a.nome || " ", { s: 9, f: FB, alinhar: "centro", depois: 0, x0, lw: cw });
+        if (a.cargo) paragrafo(a.cargo, { s: 8.2, alinhar: "centro", depois: 0, x0, lw: cw });
+        menor = Math.min(menor, E.y);
+      });
+      E.y = menor - 6;
+    }
+  }
+
   /** Rodapé paginado e arquivo final. */
   async function finalizar() {
     const rod = pdfTexto(rodape);
@@ -249,7 +270,7 @@ async function motorPdf({ titulo, assunto, numero, rotulo, rodape }) {
     return new Blob([await doc.save()], { type: "application/pdf" });
   }
 
-  Object.assign(E, { larg, escrever, novaPagina, caber, quebrar, paragrafo, secao, tabela, nota, fotos, assinatura, finalizar });
+  Object.assign(E, { larg, escrever, novaPagina, caber, quebrar, paragrafo, secao, tabela, nota, fotos, assinatura, assinaturas, finalizar });
   novaPagina();
   return E;
 }
@@ -442,6 +463,7 @@ async function renderModeloPdf(modelo) {
       case "nota": E.nota(b.t); break;
       case "fotos": await E.fotos(b.lista); break;
       case "assinatura": E.assinatura(b.nome, b.cargo, b.unidade); break;
+      case "assinaturas": E.assinaturas(b.lista); break;
       case "quebra": E.novaPagina(); break;
       case "espaco": E.y -= b.h || 10; break;
     }

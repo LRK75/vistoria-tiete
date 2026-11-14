@@ -181,6 +181,7 @@ function modeloSecretario(v, itens, fotosPorItem, comFotos) {
   if (!propostas.length) propostas.push("a) tomar ciência de que não há intervenção a executar;");
   propostas[propostas.length - 1] = propostas.at(-1).replace(/;$/, ".");
   b.push({ k: "lista", itens: propostas });
+  b.push({ k: "par", t: "Autorizadas as providências, este Departamento emitirá a correspondente Ordem de Serviço às equipes de execução, com o registro da execução de cada item." });
   b.push({ k: "par", t: `Acompanha este relatório o Relatório Técnico de Vistoria nº ${v.protocolo}, com o inventário georreferenciado, o croqui de localização e o registro fotográfico completo.` });
   b.push({ k: "par", t: "Respeitosamente,", alinhar: "esquerda" });
   b.push({ k: "par", t: `${config.municipio}, ${hoje.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" })}.`, alinhar: "esquerda" });
@@ -250,6 +251,9 @@ function renderModeloHtml(modelo) {
         break;
       case "assinatura":
         h += `<div class="assin"><div>${b.nome ? `<b>${esc(b.nome)}</b><br>` : ""}${esc(b.cargo)}${String(b.cargo).includes(b.unidade) ? "" : `<br>${esc(b.unidade)}`}</div></div>`;
+        break;
+      case "assinaturas":
+        h += `<div class="assin grade-assin">${b.lista.map((a) => `<div>${a.rotulo ? `<i>${esc(a.rotulo)}</i><br>` : ""}${a.nome ? `<b>${esc(a.nome)}</b>` : "&nbsp;"}${a.cargo ? `<br>${esc(a.cargo)}` : ""}</div>`).join("")}</div>`;
         break;
       case "quebra": h += '<div class="quebra-pagina"></div>'; break;
     }
@@ -366,6 +370,20 @@ async function renderModeloDocx(modelo) {
         corpo.push(new P({ alignment: AL.CENTER, spacing: { after: 0 }, children: [new T(b.cargo)] }));
         if (!String(b.cargo).includes(b.unidade)) corpo.push(new P({ alignment: AL.CENTER, children: [new T(b.unidade)] }));
         break;
+      case "assinaturas": {
+        const largCol = Math.floor(LARG / 2);
+        const cel = (a) => new TableCell({ width: { size: largCol, type: WidthType.DXA }, borders: semBorda, margins: { left: 200, right: 200 },
+          children: a ? [
+            new P({ alignment: AL.CENTER, spacing: { before: 700, after: 0 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "333333", space: 2 } }, children: [] }),
+            ...(a.rotulo ? [new P({ alignment: AL.CENTER, spacing: { after: 0 }, children: [new T({ text: a.rotulo, italics: true, size: 16, color: "555555" })] })] : []),
+            new P({ alignment: AL.CENTER, spacing: { after: 0 }, children: [new T({ text: a.nome || " ", bold: true, size: 19 })] }),
+            ...(a.cargo ? [new P({ alignment: AL.CENTER, spacing: { after: 120 }, children: [new T({ text: a.cargo, size: 17 })] })] : []),
+          ] : [new P("")] });
+        const rows = [];
+        for (let k = 0; k < b.lista.length; k += 2) rows.push(new TableRow({ cantSplit: true, children: [cel(b.lista[k]), cel(b.lista[k + 1])] }));
+        corpo.push(new Table({ rows, width: { size: largCol * 2, type: WidthType.DXA }, columnWidths: [largCol, largCol] }));
+        break;
+      }
       case "quebra": corpo.push(new P({ pageBreakBefore: true, children: [] })); break;
     }
   }

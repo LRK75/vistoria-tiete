@@ -242,6 +242,7 @@ async function render() {
     if (rota === "v" && id) {
       if (sub === "relatorio") { await telaVistoria(id, null); return abrirRelatorio(id); }
       if (sub === "secretario") { await telaVistoria(id, null); return abrirRelatorioSecretario(id); }
+      if (sub === "os") { await telaVistoria(id, null); return abrirOrdemServico(id); }
       return await telaVistoria(id, sub === "item" ? extra : sub === "novo" ? "novo" : null);
     }
     return await telaInicio();
@@ -443,6 +444,7 @@ async function telaVistoria(id, abrirItem) {
             <div class="botoes">
               <button class="btn btn-primario" data-acao="ir" data-destino="#v/${v.id}/relatorio" ${itens.length ? "" : "disabled"}>Relatório (PDF)</button>
               <button class="btn btn-primario" data-acao="ir" data-destino="#v/${v.id}/secretario" ${itens.length ? "" : "disabled"}>Relatório ao Secretário</button>
+              <button class="btn btn-primario" data-acao="ir" data-destino="#v/${v.id}/os" ${itens.length ? "" : "disabled"}>Ordem de Serviço</button>
               <button class="btn" data-acao="exportar" ${itens.length ? "" : "disabled"}>Exportar</button>
               <button class="btn" data-acao="status">${v.status === "CONCLUIDA" ? "Reabrir" : "Concluir vistoria"}</button>
             </div>
